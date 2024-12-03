@@ -15,8 +15,7 @@ int main()
 
     //read in the file
     int a, b;
-    while (infile >> a >> b)
-    {
+    while (infile >> a >> b) {
         list1.push_back(a);
         list2.push_back(b);
     }
@@ -29,8 +28,7 @@ int main()
     std::vector<int> tempList1 = list1;
     std::vector<int> tempList2 = list2;
 
-    for (int i = 0; i < list1.size(); i++)
-    {
+    for (int i = 0; i < list1.size(); i++) {
         size_t index1 = std::min_element(tempList1.begin(), tempList1.end()) - tempList1.begin();
         sort1.push_back(index1);
         tempList1.at(index1) = std::numeric_limits<int>::max();
@@ -42,8 +40,7 @@ int main()
 
     std::vector<int> distances;
 
-    for (int i = 0; i < list1.size(); i++)
-    {
+    for (int i = 0; i < list1.size(); i++) {
         long int distance = list1.at(sort1.at(i)) - list2.at(sort2.at(i));
         distances.push_back(std::abs(distance));
     }
@@ -54,16 +51,13 @@ int main()
 
     std::vector<int> score;
 
-    for (int i = 0; i < list1.size(); i++)
-    {
+    for (int i = 0; i < list1.size(); i++) {
         int value = list1.at(i);
 
-        int count {0};
-        for (int j = 0; j < list2.size(); j++)
-        {
-            if (value == list2.at(j))
-            {
-                count ++;
+        int count{ 0 };
+        for (int j = 0; j < list2.size(); j++) {
+            if (value == list2.at(j)) {
+                count++;
             }
         }
         score.push_back(value * count);
@@ -72,5 +66,4 @@ int main()
     long int scoresum = std::accumulate(score.begin(), score.end(), 0);
 
     std::cout << scoresum << "\n";
-
 }
