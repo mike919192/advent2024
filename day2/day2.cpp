@@ -11,7 +11,7 @@ std::vector<int> computeDiff(const std::vector<int> &in)
 {
     std::vector<int> diff(in.size() - 1);
 
-    for (int i = 1; i < in.size(); i++) {
+    for (size_t i = 1; i < in.size(); i++) {
         diff.at(i - 1) = in.at(i) - in.at(i - 1);
     }
 
@@ -57,7 +57,7 @@ int main()
         bool modifiedsafe{ false };
 
         if (unmodifiedsafe == false) {
-            for (int i = 0; i < row.size(); i++) {
+            for (size_t i = 0; i < row.size(); i++) {
                 std::vector<int> mod_row = row;
                 mod_row.erase(std::next(mod_row.begin(), i));
 
