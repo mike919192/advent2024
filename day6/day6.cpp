@@ -126,7 +126,6 @@ bool execute_game_tick(std::vector<std::vector<cell>> &map, patrol_guard &guard,
         guard.move_next_position();
     }
 
-    //if guard == original_guard, we have looped
     return guard.is_on_map(map.at(0).size(), map.size()) &&
            map.at(guard.pos.second).at(guard.pos.first).visited_guard != guard;
 }
