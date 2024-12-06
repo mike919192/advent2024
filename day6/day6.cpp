@@ -130,7 +130,8 @@ bool execute_game_tick(std::vector<std::vector<cell>> &map, patrol_guard &guard,
            map.at(guard.pos.second).at(guard.pos.first).visited_guard != guard;
 }
 
-bool part2_thread(const std::vector<std::vector<cell>> &original_map, const patrol_guard &original_guard, size_t i, size_t j)
+bool part2_thread(const std::vector<std::vector<cell>> &original_map, const patrol_guard &original_guard, size_t i,
+                  size_t j)
 {
     auto copy_map = original_map;
     auto copy_guard = original_guard;
@@ -177,12 +178,12 @@ int main()
     //part 2
     int is_looped_sum{ 0 };
     for (size_t j = 0; j < original_map.size(); j++) {
-        for (size_t i = 0; i < original_map.at(0).size(); i+=5) {
+        for (size_t i = 0; i < original_map.at(0).size(); i += 5) {
             std::future<bool> ret1 = std::async(&part2_thread, original_map, original_guard, i, j);
-            std::future<bool> ret2 = std::async(&part2_thread, original_map, original_guard, i+1, j);
-            std::future<bool> ret3 = std::async(&part2_thread, original_map, original_guard, i+2, j);
-            std::future<bool> ret4 = std::async(&part2_thread, original_map, original_guard, i+3, j);
-            std::future<bool> ret5 = std::async(&part2_thread, original_map, original_guard, i+4, j);
+            std::future<bool> ret2 = std::async(&part2_thread, original_map, original_guard, i + 1, j);
+            std::future<bool> ret3 = std::async(&part2_thread, original_map, original_guard, i + 2, j);
+            std::future<bool> ret4 = std::async(&part2_thread, original_map, original_guard, i + 3, j);
+            std::future<bool> ret5 = std::async(&part2_thread, original_map, original_guard, i + 4, j);
 
             if (ret1.get())
                 is_looped_sum++;
