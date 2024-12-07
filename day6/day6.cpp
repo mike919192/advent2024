@@ -176,26 +176,29 @@ int main()
     std::cout << visited_sum << '\n';
 
     //part 2
+    std::vector<std::future<bool>> futures;
+    futures.reserve(16);
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    
     int is_looped_sum{ 0 };
     for (size_t j = 0; j < original_map.size(); j++) {
-        for (size_t i = 0; i < original_map.at(0).size(); i += 5) {
-            std::future<bool> ret1 = std::async(&part2_thread, original_map, original_guard, i, j);
-            std::future<bool> ret2 = std::async(&part2_thread, original_map, original_guard, i + 1, j);
-            std::future<bool> ret3 = std::async(&part2_thread, original_map, original_guard, i + 2, j);
-            std::future<bool> ret4 = std::async(&part2_thread, original_map, original_guard, i + 3, j);
-            std::future<bool> ret5 = std::async(&part2_thread, original_map, original_guard, i + 4, j);
+        for (size_t i = 0; i < original_map.at(0).size(); i++) {
+            if (!map.at(j).at(i).is_visited)
+                continue;
 
-            if (ret1.get())
-                is_looped_sum++;
-            if (ret2.get())
-                is_looped_sum++;
-            if (ret3.get())
-                is_looped_sum++;
-            if (ret4.get())
-                is_looped_sum++;
-            if (ret5.get())
-                is_looped_sum++;
+            futures.push_back(std::async(&part2_thread, original_map, original_guard, i, j));
+
+            if (futures.size() >= 4) {
+                for (auto & fut : futures) {
+                    if (fut.get())
+                        is_looped_sum++;
+                }
+                futures.clear();
+            }
         }
     }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << is_looped_sum << '\n';
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
 }
