@@ -180,7 +180,7 @@ int main()
     futures.reserve(16);
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    
+
     int is_looped_sum{ 0 };
     for (size_t j = 0; j < original_map.size(); j++) {
         for (size_t i = 0; i < original_map.at(0).size(); i++) {
@@ -190,7 +190,7 @@ int main()
             futures.push_back(std::async(&part2_thread, original_map, original_guard, i, j));
 
             if (futures.size() >= 4) {
-                for (auto & fut : futures) {
+                for (auto &fut : futures) {
                     if (fut.get())
                         is_looped_sum++;
                 }
@@ -200,5 +200,6 @@ int main()
     }
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << is_looped_sum << '\n';
-    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+              << "[ms]" << std::endl;
 }
