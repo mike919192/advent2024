@@ -51,7 +51,6 @@ num_type do_oper(oper oper_in, num_type a, num_type b)
         //find the log10 of b
         double log_b = std::log10(static_cast<double>(b));
         //round it up
-        //double round_up = std::ceil(log_b);
         double round_up = std::floor(log_b) + 1.0;
         //compute the scale for a
         double scale = std::pow(10, round_up);
@@ -106,8 +105,6 @@ int main()
     for (const auto &equation : equations) {
         oper_permutator permu{ .num_of_operators = equation.size() - 2 };
 
-        //std::cout << "halp\n";
-
         do {
             num_type result = equation.at(1);
             for (size_t i = 2; i < equation.size(); i++) {
@@ -121,8 +118,6 @@ int main()
                 break;
             }
         } while (permu.next_permutation());
-
-        //std::cout << "halp\n";
     }
 
     std::cout << result_sum << '\n';
