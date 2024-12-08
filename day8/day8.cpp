@@ -6,19 +6,19 @@
 #include <iostream>
 #include <algorithm>
 
-template <typename T,typename U, typename V,typename W>                            
-auto operator+(const std::pair<T,U> & l,const std::pair<V,W> & r)                  
--> std::pair<decltype(l.first+r.first),decltype(l.second+r.second)>                
-{                                                                                  
-    return {l.first+r.first,l.second+r.second};                                    
-} 
+template <typename T, typename U, typename V, typename W>
+auto operator+(const std::pair<T, U> &l,
+               const std::pair<V, W> &r) -> std::pair<decltype(l.first + r.first), decltype(l.second + r.second)>
+{
+    return { l.first + r.first, l.second + r.second };
+}
 
-template <typename T,typename U, typename V,typename W>                            
-auto operator-(const std::pair<T,U> & l,const std::pair<V,W> & r)                  
--> std::pair<decltype(l.first+r.first),decltype(l.second+r.second)>                
-{                                                                                  
-    return {l.first-r.first,l.second-r.second};                                    
-} 
+template <typename T, typename U, typename V, typename W>
+auto operator-(const std::pair<T, U> &l,
+               const std::pair<V, W> &r) -> std::pair<decltype(l.first + r.first), decltype(l.second + r.second)>
+{
+    return { l.first - r.first, l.second - r.second };
+}
 
 bool is_pos_on_map(int pos_x, int pos_y, int dim_x, int dim_y)
 {
@@ -32,7 +32,7 @@ bool is_pos_on_map(std::pair<int, int> pos, std::pair<int, int> dim)
 
 struct antenna {
     std::pair<int, int> pos{ 0, 0 };
-    char frequency {0};
+    char frequency{ 0 };
 };
 
 using char_map_t = std::vector<std::vector<char>>;
@@ -63,29 +63,26 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
 {
     antenna_list_t antennas;
     auto char_detect = [](char i) { return i == '.'; };
-    
+
     //find the antennas and set there properties
     for (size_t i = 0; i < map_chars.size(); i++) {
-        size_t offset {0};
-        while(true) {
-            auto itr1 = std::find_if_not(std::next(map_chars.at(i).begin(), offset), map_chars.at(i).end(), char_detect);
-            if (itr1 != map_chars.at(i).end()) {
-                auto index1 = std::distance(map_chars.at(i).begin(), itr1);
-                offset = index1 + 1;
-                char freq = map_chars.at(i).at(index1);
-                
-                //find if their is already an antenna of this frequency
-                auto itr2 = std::find_if(antennas.begin(), antennas.end(), 
-                    [freq](antenna_sublist_t i) { return i.size() > 0 && i.at(0).frequency == freq; });
-                
-                if (itr2 == antennas.end()) {
-                    antennas.push_back(antenna_sublist_t{});
-                    antennas.back().push_back(antenna{ .pos = std::pair<int, int>{i, index1}, .frequency = freq });
-                } else {
-                    (*itr2).push_back(antenna{ .pos = std::pair<int, int>{i, index1}, .frequency = freq });
-                }
+        size_t offset{ 0 };
+        std::vector<char>::const_iterator itr1;
+        while ((itr1 = std::find_if_not(std::next(map_chars.at(i).begin(), offset), map_chars.at(i).end(),
+                                        char_detect)) != map_chars.at(i).end()) {
+            auto index1 = std::distance(map_chars.at(i).begin(), itr1);
+            offset = index1 + 1;
+            char freq = map_chars.at(i).at(index1);
+
+            //find if their is already an antenna of this frequency
+            auto itr2 = std::find_if(antennas.begin(), antennas.end(),
+                                     [freq](antenna_sublist_t i) { return i.size() > 0 && i.at(0).frequency == freq; });
+
+            if (itr2 == antennas.end()) {
+                antennas.push_back(antenna_sublist_t{});
+                antennas.back().push_back(antenna{ .pos = std::pair<int, int>{ i, index1 }, .frequency = freq });
             } else {
-                break;
+                (*itr2).push_back(antenna{ .pos = std::pair<int, int>{ i, index1 }, .frequency = freq });
             }
         }
     }
@@ -93,21 +90,19 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
     return antennas;
 }
 
-int calculate_antinodes(const antenna_list_t & antennas, std::pair<int, int> dim)
+int calculate_antinodes(const antenna_list_t &antennas, std::pair<int, int> dim)
 {
-    int antinode_count {0};
+    int antinode_count{ 0 };
     std::vector<std::pair<int, int>> antinode_positions;
-    for (const auto & sublist : antennas) {
-
-        for (size_t i1 {0}; i1 + 1 < sublist.size(); i1++) {
-
+    for (const auto &sublist : antennas) {
+        for (size_t i1{ 0 }; i1 + 1 < sublist.size(); i1++) {
             for (size_t i2 = i1 + 1; i2 < sublist.size(); i2++) {
                 //use antennas at starting index and i
                 std::pair<int, int> dist = sublist.at(i1).pos - sublist.at(i2).pos;
                 std::pair<int, int> pos1 = sublist.at(i1).pos + dist;
                 std::pair<int, int> pos2 = sublist.at(i2).pos - dist;
 
-                auto itr1 = std::find(antinode_positions.begin(), antinode_positions.end(), pos1);                
+                auto itr1 = std::find(antinode_positions.begin(), antinode_positions.end(), pos1);
 
                 if (is_pos_on_map(pos1, dim) && itr1 == antinode_positions.end()) {
                     antinode_positions.push_back(pos1);
@@ -115,11 +110,11 @@ int calculate_antinodes(const antenna_list_t & antennas, std::pair<int, int> dim
                 }
 
                 auto itr2 = std::find(antinode_positions.begin(), antinode_positions.end(), pos2);
-                    
+
                 if (is_pos_on_map(pos2, dim) && itr2 == antinode_positions.end()) {
                     antinode_positions.push_back(pos2);
                     antinode_count++;
-                }                    
+                }
             }
         }
     }
@@ -132,7 +127,8 @@ int main()
 
     const auto antennas = construct_antenna_list(map_chars);
 
-    const auto antinode_count = calculate_antinodes(antennas, std::pair<int, int>{map_chars.at(0).size(), map_chars.size()});
+    const auto antinode_count =
+        calculate_antinodes(antennas, std::pair<int, int>{ map_chars.at(0).size(), map_chars.size() });
 
     std::cout << antinode_count << '\n';
 }
