@@ -7,17 +7,21 @@
 #include <algorithm>
 
 template <typename T, typename U, typename V, typename W>
-auto operator+(const std::pair<T, U> &l,
-               const std::pair<V, W> &r) -> std::pair<decltype(l.first + r.first), decltype(l.second + r.second)>
+auto operator+(const std::pair<T, U> &l, const std::pair<V, W> &r)
 {
-    return { l.first + r.first, l.second + r.second };
+    return std::pair<T, U>{ l.first + r.first, l.second + r.second };
 }
 
 template <typename T, typename U, typename V, typename W>
-auto operator-(const std::pair<T, U> &l,
-               const std::pair<V, W> &r) -> std::pair<decltype(l.first + r.first), decltype(l.second + r.second)>
+auto operator-(const std::pair<T, U> &l, const std::pair<V, W> &r)
 {
-    return { l.first - r.first, l.second - r.second };
+    return std::pair<T, U>{ l.first - r.first, l.second - r.second };
+}
+
+template <typename T, typename U>
+auto operator-(const std::pair<T, U> &l)
+{
+    return std::pair<T, U>{ -l.first, -l.second };
 }
 
 using xy_pos_t = std::pair<int, int>;
@@ -88,7 +92,19 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
     return antennas;
 }
 
-int calculate_antinodes(const antenna_list_t &antennas, xy_pos_t dim)
+int locate_antinode(std::vector<xy_pos_t> &antinode_positions, xy_pos_t dim, xy_pos_t pos)
+{
+    int antinode_count{ 0 };
+    auto itr = std::find(antinode_positions.begin(), antinode_positions.end(), pos);
+
+    if (is_pos_on_map(pos, dim) && itr == antinode_positions.end()) {
+        antinode_positions.push_back(pos);
+        antinode_count++;
+    }
+    return antinode_count;
+}
+
+int calculate_antinodes_part1(const antenna_list_t &antennas, xy_pos_t dim)
 {
     int antinode_count{ 0 };
     std::vector<xy_pos_t> antinode_positions;
@@ -97,22 +113,43 @@ int calculate_antinodes(const antenna_list_t &antennas, xy_pos_t dim)
             for (size_t i2 = i1 + 1; i2 < sublist.size(); i2++) {
                 //use antennas at starting index and i
                 xy_pos_t dist = sublist.at(i1).pos - sublist.at(i2).pos;
-                xy_pos_t pos1 = sublist.at(i1).pos + dist;
-                xy_pos_t pos2 = sublist.at(i2).pos - dist;
 
-                auto itr1 = std::find(antinode_positions.begin(), antinode_positions.end(), pos1);
+                antinode_count += locate_antinode(antinode_positions, dim, sublist.at(i1).pos + dist);
+                antinode_count += locate_antinode(antinode_positions, dim, sublist.at(i2).pos - dist);
+            }
+        }
+    }
+    return antinode_count;
+}
 
-                if (is_pos_on_map(pos1, dim) && itr1 == antinode_positions.end()) {
-                    antinode_positions.push_back(pos1);
-                    antinode_count++;
-                }
+int resonant_harmonics(std::vector<xy_pos_t> &antinode_positions, xy_pos_t dim, xy_pos_t pos, xy_pos_t dist)
+{
+    int antinode_count{ 0 };
+    do {
+        auto itr = std::find(antinode_positions.begin(), antinode_positions.end(), pos);
 
-                auto itr2 = std::find(antinode_positions.begin(), antinode_positions.end(), pos2);
+        if (itr == antinode_positions.end()) {
+            antinode_positions.push_back(pos);
+            antinode_count++;
+        }
+        pos = pos + dist;
+    } while (is_pos_on_map(pos, dim));
 
-                if (is_pos_on_map(pos2, dim) && itr2 == antinode_positions.end()) {
-                    antinode_positions.push_back(pos2);
-                    antinode_count++;
-                }
+    return antinode_count;
+}
+
+int calculate_antinodes_part2(const antenna_list_t &antennas, xy_pos_t dim)
+{
+    int antinode_count{ 0 };
+    std::vector<xy_pos_t> antinode_positions;
+    for (const auto &sublist : antennas) {
+        for (size_t i1{ 0 }; i1 + 1 < sublist.size(); i1++) {
+            for (size_t i2 = i1 + 1; i2 < sublist.size(); i2++) {
+                //use antennas at starting index and i
+                xy_pos_t dist = sublist.at(i1).pos - sublist.at(i2).pos;
+
+                antinode_count += resonant_harmonics(antinode_positions, dim, sublist.at(i1).pos, dist);
+                antinode_count += resonant_harmonics(antinode_positions, dim, sublist.at(i2).pos, -dist);
             }
         }
     }
@@ -125,7 +162,13 @@ int main()
 
     const auto antennas = construct_antenna_list(map_chars);
 
-    const auto antinode_count = calculate_antinodes(antennas, xy_pos_t{ map_chars.at(0).size(), map_chars.size() });
+    const auto antinode_count_part1 =
+        calculate_antinodes_part1(antennas, xy_pos_t{ map_chars.at(0).size(), map_chars.size() });
 
-    std::cout << antinode_count << '\n';
+    std::cout << antinode_count_part1 << '\n';
+
+    const auto antinode_count_part2 =
+        calculate_antinodes_part2(antennas, xy_pos_t{ map_chars.at(0).size(), map_chars.size() });
+
+    std::cout << antinode_count_part2 << '\n';
 }
