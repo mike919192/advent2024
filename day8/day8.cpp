@@ -78,10 +78,10 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
 
             //find if their is already an antenna of this frequency
             auto itr2 = std::find_if(antennas.begin(), antennas.end(),
-                                     [freq](antenna_sublist_t i) { return i.size() > 0 && i.at(0).frequency == freq; });
+                                     [freq](antenna_sublist_t i) { return !i.empty() && i.at(0).frequency == freq; });
 
             if (itr2 == antennas.end()) {
-                antennas.push_back(antenna_sublist_t{});
+                antennas.emplace_back();
                 antennas.back().push_back(antenna{ .pos = xy_pos_t{ i, index1 }, .frequency = freq });
             } else {
                 (*itr2).push_back(antenna{ .pos = xy_pos_t{ i, index1 }, .frequency = freq });
