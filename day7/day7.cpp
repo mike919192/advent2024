@@ -110,8 +110,6 @@ int main()
             for (size_t i = 2; i < equation.size(); i++) {
                 oper oper_to_do = permu.get_oper(i - 2);
                 result = do_oper(oper_to_do, result, equation.at(i));
-                if (result < 0)
-                    std::cout << "here\n";
             }
             if (result == equation.at(0)) {
                 result_sum += result;
