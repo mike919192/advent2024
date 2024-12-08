@@ -20,24 +20,22 @@ auto operator-(const std::pair<T, U> &l,
     return { l.first - r.first, l.second - r.second };
 }
 
-bool is_pos_on_map(int pos_x, int pos_y, int dim_x, int dim_y)
-{
-    return !(pos_x < 0 || pos_y < 0 || pos_x >= dim_x || pos_y >= dim_y);
-}
-
-bool is_pos_on_map(std::pair<int, int> pos, std::pair<int, int> dim)
-{
-    return !(pos.first < 0 || pos.second < 0 || pos.first >= dim.first || pos.second >= dim.second);
-}
+using xy_pos_t = std::pair<int, int>;
 
 struct antenna {
-    std::pair<int, int> pos{ 0, 0 };
+    xy_pos_t pos{ 0, 0 };
     char frequency{ 0 };
 };
 
-using char_map_t = std::vector<std::vector<char>>;
-using antenna_list_t = std::vector<std::vector<antenna>>;
+using char_row_t = std::vector<char>;
+using char_map_t = std::vector<char_row_t>;
 using antenna_sublist_t = std::vector<antenna>;
+using antenna_list_t = std::vector<antenna_sublist_t>;
+
+bool is_pos_on_map(xy_pos_t pos, xy_pos_t dim)
+{
+    return !(pos.first < 0 || pos.second < 0 || pos.first >= dim.first || pos.second >= dim.second);
+}
 
 char_map_t read_file()
 {
@@ -46,7 +44,7 @@ char_map_t read_file()
 
     for (std::string line; std::getline(infile, line);) {
         std::istringstream ss(line);
-        std::vector<char> row;
+        char_row_t row;
 
         char value{ 0 };
         while (ss >> value) {
@@ -67,7 +65,7 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
     //find the antennas and set there properties
     for (size_t i = 0; i < map_chars.size(); i++) {
         size_t offset{ 0 };
-        std::vector<char>::const_iterator itr1;
+        char_row_t::const_iterator itr1;
         while ((itr1 = std::find_if_not(std::next(map_chars.at(i).begin(), offset), map_chars.at(i).end(),
                                         char_detect)) != map_chars.at(i).end()) {
             auto index1 = std::distance(map_chars.at(i).begin(), itr1);
@@ -80,9 +78,9 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
 
             if (itr2 == antennas.end()) {
                 antennas.push_back(antenna_sublist_t{});
-                antennas.back().push_back(antenna{ .pos = std::pair<int, int>{ i, index1 }, .frequency = freq });
+                antennas.back().push_back(antenna{ .pos = xy_pos_t{ i, index1 }, .frequency = freq });
             } else {
-                (*itr2).push_back(antenna{ .pos = std::pair<int, int>{ i, index1 }, .frequency = freq });
+                (*itr2).push_back(antenna{ .pos = xy_pos_t{ i, index1 }, .frequency = freq });
             }
         }
     }
@@ -90,17 +88,17 @@ antenna_list_t construct_antenna_list(const char_map_t &map_chars)
     return antennas;
 }
 
-int calculate_antinodes(const antenna_list_t &antennas, std::pair<int, int> dim)
+int calculate_antinodes(const antenna_list_t &antennas, xy_pos_t dim)
 {
     int antinode_count{ 0 };
-    std::vector<std::pair<int, int>> antinode_positions;
+    std::vector<xy_pos_t> antinode_positions;
     for (const auto &sublist : antennas) {
         for (size_t i1{ 0 }; i1 + 1 < sublist.size(); i1++) {
             for (size_t i2 = i1 + 1; i2 < sublist.size(); i2++) {
                 //use antennas at starting index and i
-                std::pair<int, int> dist = sublist.at(i1).pos - sublist.at(i2).pos;
-                std::pair<int, int> pos1 = sublist.at(i1).pos + dist;
-                std::pair<int, int> pos2 = sublist.at(i2).pos - dist;
+                xy_pos_t dist = sublist.at(i1).pos - sublist.at(i2).pos;
+                xy_pos_t pos1 = sublist.at(i1).pos + dist;
+                xy_pos_t pos2 = sublist.at(i2).pos - dist;
 
                 auto itr1 = std::find(antinode_positions.begin(), antinode_positions.end(), pos1);
 
@@ -127,8 +125,7 @@ int main()
 
     const auto antennas = construct_antenna_list(map_chars);
 
-    const auto antinode_count =
-        calculate_antinodes(antennas, std::pair<int, int>{ map_chars.at(0).size(), map_chars.size() });
+    const auto antinode_count = calculate_antinodes(antennas, xy_pos_t{ map_chars.at(0).size(), map_chars.size() });
 
     std::cout << antinode_count << '\n';
 }
