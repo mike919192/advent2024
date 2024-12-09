@@ -96,7 +96,6 @@ void compact_files_part2(element_list_t &elements)
             continue;
 
         //move the element
-        //elements.splice(empty_itr, elements, el_itr);
         int size_diff = (*empty_itr).size - (*el_itr).size;
         std::iter_swap(empty_itr, el_itr);
 
