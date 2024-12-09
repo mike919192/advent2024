@@ -5,51 +5,57 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <list>
+
+struct disk_element {
+    int id {-1};
+    int size {0};
+};
 
 using int_row_t = std::vector<int>;
+using int_list_t = std::list<int>;
+using element_list_t = std::list<disk_element>;
 
-int_row_t read_file()
+element_list_t read_file()
 {
     std::ifstream infile("input.txt");
 
     std::string line; 
     std::getline(infile, line);
     std::istringstream ss(line);
-    int_row_t row;
+    element_list_t row;
 
+    bool is_empty{ false };
+    int id {0};
     char value{ 0 };
     while (ss >> value) {
-        row.push_back(value - '0');
+        if (is_empty) {
+            row.push_back(disk_element{.id = -1, .size = value - '0'});
+            is_empty = false;
+        } else {
+            row.push_back(disk_element{.id = id, .size = value - '0'});
+            id++;
+            is_empty = true;
+        }
     }    
 
     return row;
 }
 
-int_row_t disk_map_to_blocks(const int_row_t & disk_map)
+int_row_t disk_map_to_blocks(const element_list_t & disk_map)
 {
     int_row_t blocks;
 
-    bool is_empty_space {false};
-    int id { 0 };
-
     for (auto num : disk_map) {
-        if (is_empty_space) {
-            for (int i = 0; i < num; i++)
-                blocks.push_back(-1);
-
-        } else {
-            for (int i = 0; i < num; i++)
-                blocks.push_back(id);
-            id++;
+        for (int i = 0; i < num.size; i++) {
+            blocks.push_back(num.id);
         }
-
-        is_empty_space = !is_empty_space;
     }
 
     return blocks;
 }
 
-void compact_blocks(int_row_t & blocks)
+void compact_blocks_part1(int_row_t & blocks)
 {
     while (true) {
         //find first empty spot
@@ -69,14 +75,48 @@ void compact_blocks(int_row_t & blocks)
     }
 }
 
+void compact_files_part2(element_list_t &elements)
+{    
+    //find file with max id
+    auto max_itr = std::max_element(elements.begin(), elements.end(), [](auto a, auto b){return a.id < b.id;});
+    int id = (*max_itr).id;
+
+    //loop backwards
+    for (int i = id; i >= 0; i--) {
+        auto el_ritr = std::find_if(elements.rbegin(), elements.rend(), [i](auto a){return a.id == i;});
+        size_t el_index = elements.size() - (std::distance(elements.rbegin(), el_ritr) + 1);
+        auto el_itr = std::next(elements.begin(), el_index);
+
+        auto empty_itr = std::find_if(elements.begin(), elements.end(), [el_itr](auto a){return a.id == -1 && a.size >= (*el_itr).size;});
+        size_t empty_index = std::distance(elements.begin(), empty_itr);
+
+        //only move it if the empty is before the element
+        if (el_index < empty_index || empty_itr == elements.end())
+            continue;
+
+        //move the element
+        //elements.splice(empty_itr, elements, el_itr);
+        int size_diff = (*empty_itr).size - (*el_itr).size;
+        std::iter_swap(empty_itr, el_itr);
+
+        //adjust the empty size
+        (*el_itr).size = (*empty_itr).size;
+
+        //if size_diff is greater than zero we need to 
+        //insert an empty element after where the element was moved to
+        if (size_diff > 0) {
+            elements.insert(std::next(empty_itr, 1), disk_element{.id = -1, .size = size_diff});
+        }
+    }    
+}
+
 long calc_checksum(const int_row_t & blocks)
 {
     int pos {0};
     long checksum {0};
     for (auto num : blocks) {
-        if (num == -1)
-            break;
-        checksum += num * pos;
+        if (num != -1)
+            checksum += num * pos;
         pos++;
     }
     return checksum;
@@ -84,13 +124,23 @@ long calc_checksum(const int_row_t & blocks)
 
 int main()
 {
-    const auto disk_map = read_file();
+    //part1
+    auto disk_map = read_file();
 
     auto blocks = disk_map_to_blocks(disk_map);
 
-    compact_blocks(blocks);
+    compact_blocks_part1(blocks);
 
     long checksum = calc_checksum(blocks);
 
-    std::cout << checksum << "\n";
+    std::cout << checksum << '\n';
+
+    //part2
+    compact_files_part2(disk_map);
+
+    const auto blocks2 = disk_map_to_blocks(disk_map);
+
+    long checksum2 = calc_checksum(blocks2);
+
+    std::cout << checksum2 << '\n';
 }
