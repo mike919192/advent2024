@@ -91,7 +91,7 @@ trailhead_list_t scan_for_trailheads(const int_map_t &map)
     return trailheads;
 }
 
-template <bool part_2>
+template <bool part_2_t>
 void trace_trailhead(const trailhead &trail, const int_map_t &map, trailhead_list_t &trailends, xy_pos_t dim)
 {
     //loop through all the possible directions
@@ -100,17 +100,15 @@ void trace_trailhead(const trailhead &trail, const int_map_t &map, trailhead_lis
         if (is_pos_on_map(new_pos, dim) && map.at(new_pos.second).at(new_pos.first) == trail.height + 1) {
             if (map.at(new_pos.second).at(new_pos.first) == 9) {
                 trailhead new_trail_end{ .pos = new_pos, .height = 9 };
-                if (part_2 || !vector_contains(trailends, new_trail_end)) {
+                if (part_2_t || !vector_contains(trailends, new_trail_end)) {
                     trailends.push_back(new_trail_end);
                 }
                 continue;
             } else {
-                trace_trailhead<part_2>(trailhead{ .pos = new_pos, .height = trail.height + 1 }, map, trailends, dim);
+                trace_trailhead<part_2_t>(trailhead{ .pos = new_pos, .height = trail.height + 1 }, map, trailends, dim);
             }
         }
     }
-
-    return;
 }
 
 int main()
