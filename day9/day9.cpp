@@ -78,12 +78,12 @@ void compact_blocks_part1(int_row_t &blocks)
 void compact_files_part2(element_list_t &elements)
 {
     //find file with max id
-    auto max_itr = std::max_element(elements.begin(), elements.end(), [](auto a, auto b) { return a.id < b.id; });
-    int id = (*max_itr).id;
+    auto el_ritr = std::find_if(elements.rbegin(), elements.rend(), [](auto a) { return a.id != -1; });
+    int id = (*el_ritr).id;
 
     //loop backwards
     for (int i = id; i >= 0; i--) {
-        auto el_ritr = std::find_if(elements.rbegin(), elements.rend(), [i](auto a) { return a.id == i; });
+        el_ritr = std::find_if(el_ritr, elements.rend(), [i](auto a) { return a.id == i; });
         size_t el_index = elements.size() - (std::distance(elements.rbegin(), el_ritr) + 1);
         auto el_itr = std::next(elements.begin(), el_index);
 
