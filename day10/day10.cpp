@@ -26,7 +26,7 @@ auto operator-(const std::pair<T, U> &l)
 }
 
 template <typename T>
-bool vector_contains(const std::vector<T>& vec, const T& val)
+bool vector_contains(const std::vector<T> &vec, const T &val)
 {
     auto itr = std::find(vec.begin(), vec.end(), val);
     return !(itr == vec.end());
@@ -38,7 +38,7 @@ using xy_pos_t = std::pair<int, int>;
 
 struct trailhead {
     xy_pos_t pos{ 0, 0 };
-    int height{0};
+    int height{ 0 };
     bool operator==(const trailhead &) const = default;
 };
 
@@ -49,7 +49,8 @@ bool is_pos_on_map(xy_pos_t pos, xy_pos_t dim)
     return !(pos.first < 0 || pos.second < 0 || pos.first >= dim.first || pos.second >= dim.second);
 }
 
-static constexpr std::array<xy_pos_t, 4> trail_dirs = {xy_pos_t{1, 0}, xy_pos_t{0, 1}, xy_pos_t{-1, 0}, xy_pos_t{0, -1}};
+static constexpr std::array<xy_pos_t, 4> trail_dirs = { xy_pos_t{ 1, 0 }, xy_pos_t{ 0, 1 }, xy_pos_t{ -1, 0 },
+                                                        xy_pos_t{ 0, -1 } };
 
 int_map_t read_file()
 {
@@ -75,37 +76,36 @@ trailhead_list_t scan_for_trailheads(const int_map_t &map)
 {
     trailhead_list_t trailheads;
     auto trailhead_detect = [](auto i) { return i == 0; };
-    int pos_y {0};
-    for (const auto & map_row : map) {
+    int pos_y{ 0 };
+    for (const auto &map_row : map) {
         size_t offset{ 0 };
         int_row_t::const_iterator itr1;
-        while ((itr1 = std::find_if(std::next(map_row.begin(), offset), map_row.end(), trailhead_detect)) != map_row.end()) {
+        while ((itr1 = std::find_if(std::next(map_row.begin(), offset), map_row.end(), trailhead_detect)) !=
+               map_row.end()) {
             auto pos_x = std::distance(map_row.begin(), itr1);
             offset = pos_x + 1;
-            trailheads.push_back(trailhead{.pos = xy_pos_t{pos_x, pos_y}});
+            trailheads.push_back(trailhead{ .pos = xy_pos_t{ pos_x, pos_y } });
         }
         pos_y++;
     }
     return trailheads;
 }
 
-void trace_trailhead(const trailhead & trail, const int_map_t & map, trailhead_list_t &trailends, xy_pos_t dim)
+template <bool part_2>
+void trace_trailhead(const trailhead &trail, const int_map_t &map, trailhead_list_t &trailends, xy_pos_t dim)
 {
     //loop through all the possible directions
-    for (const auto & trail_dir : trail_dirs) {
+    for (const auto &trail_dir : trail_dirs) {
         xy_pos_t new_pos = trail.pos + trail_dir;
         if (is_pos_on_map(new_pos, dim) && map.at(new_pos.second).at(new_pos.first) == trail.height + 1) {
             if (map.at(new_pos.second).at(new_pos.first) == 9) {
-                trailhead new_trail_end {.pos = new_pos, .height = 9};
-                //std::cout << "End reached: " << new_pos.first << "," << new_pos.second << '\n';
-                //if (!vector_contains(trailends, new_trail_end)) {
-                    //std::cout << "Adding it\n";
+                trailhead new_trail_end{ .pos = new_pos, .height = 9 };
+                if (part_2 || !vector_contains(trailends, new_trail_end)) {
                     trailends.push_back(new_trail_end);
-                //}
+                }
                 continue;
             } else {
-                //std::cout << "Going: " << new_pos.first << "," << new_pos.second << '\n';
-                trace_trailhead(trailhead{.pos = new_pos, .height = trail.height + 1}, map, trailends, dim);
+                trace_trailhead<part_2>(trailhead{ .pos = new_pos, .height = trail.height + 1 }, map, trailends, dim);
             }
         }
     }
@@ -119,17 +119,21 @@ int main()
 
     const auto trailheads = scan_for_trailheads(map);
 
-    xy_pos_t dim = xy_pos_t{map.at(0).size(), map.size()};
+    xy_pos_t dim = xy_pos_t{ map.at(0).size(), map.size() };
 
-    int score {0};
+    int score_part1{ 0 };
+    int score_part2{ 0 };
 
-    for (const auto & trailhead : trailheads) {
-        trailhead_list_t trailends;
-        //std::cout << "Starting: " << trailhead.pos.first << "," << trailhead.pos.second << '\n';
-        trace_trailhead(trailhead, map, trailends, dim);
-        //std::cout << trailends.size() << '\n';
-        score += trailends.size();
+    for (const auto &trailhead : trailheads) {
+        trailhead_list_t trailends_part1;
+        trace_trailhead<false>(trailhead, map, trailends_part1, dim);
+        score_part1 += trailends_part1.size();
+
+        trailhead_list_t trailends_part2;
+        trace_trailhead<true>(trailhead, map, trailends_part2, dim);
+        score_part2 += trailends_part2.size();
     }
 
-    std::cout << score << '\n';
+    std::cout << score_part1 << '\n';
+    std::cout << score_part2 << '\n';
 }
