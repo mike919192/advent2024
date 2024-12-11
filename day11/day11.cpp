@@ -2,12 +2,8 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-#include <list>
 #include <cmath>
-#include <tuple>
-#include <ranges>
 #include <iostream>
-#include <future>
 #include <vector>
 #include <unordered_map>
 
@@ -20,14 +16,10 @@ struct stone {
 
 template <>
 struct std::hash<stone> {
-    std::size_t operator()(const stone &k) const
+    size_t operator()(const stone &k) const
     {
-        using std::size_t;
-        using std::hash;
-        using std::string;
-
-        // Compute individual hash values for first,
-        // second and third and combine them using XOR
+        // Compute individual hash values for fields
+        // and combine them using XOR
         // and bit shifting:
 
         return ((hash<num_type_t>()(k.value) ^ (hash<int>()(k.iteration) << 1)) >> 1);
