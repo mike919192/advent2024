@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <tuple>
 
 template <typename T, typename U, typename V, typename W>
 auto operator+(const std::pair<T, U> &l, const std::pair<V, W> &r)
@@ -92,7 +93,6 @@ int count_fence_sides(fence_row_t &fence_group)
         (*itr1).is_traced = true;
         fence_row_t::iterator itr2;
         bool begin_to_end{ true };
-        //count_sides++;
 
         auto connect_fence = [&itr1, &begin_to_end](const fence_segment &a) {
             if (begin_to_end)
@@ -133,11 +133,11 @@ void grow_group(plot_map_t &plot_map, plot_row_t &plot_group, xy_pos_t pos, xy_p
     //check all the directions we can grow
     for (const auto &grow_dir : grow_dirs) {
         xy_pos_t new_pos = pos + grow_dir;
-        if (is_pos_on_map(new_pos, dim) && plot_map.at(new_pos.second).at(new_pos.first).is_grouped == false &&
+        if (is_pos_on_map(new_pos, dim) && !plot_map.at(new_pos.second).at(new_pos.first).is_grouped &&
             plot_map.at(new_pos.second).at(new_pos.first).plant_type == current_plant) {
             grow_group(plot_map, plot_group, new_pos, dim, fence_group);
         }
-        //if we go off the map or its a different plant, we can sum fence
+        //if we go off the map or its a different plant, we create a fence segment
         if (!is_pos_on_map(new_pos, dim) || plot_map.at(new_pos.second).at(new_pos.first).plant_type != current_plant) {
             if (grow_dir == grow_dirs.at(0)) {
                 fence_group.push_back(fence_segment{
@@ -156,7 +156,7 @@ void grow_group(plot_map_t &plot_map, plot_row_t &plot_group, xy_pos_t pos, xy_p
     }
 }
 
-int group_plots(plot_map_t &plot_map)
+std::tuple<int, int> group_plots(plot_map_t &plot_map)
 {
     xy_pos_t dim{ plot_map.at(0).size(), plot_map.size() };
     plot_map_t plot_groups;
@@ -165,13 +165,12 @@ int group_plots(plot_map_t &plot_map)
     size_t y{ 0 };
     for (auto &plot_row : plot_map) {
         plot_row_t::iterator itr;
-        while ((itr = std::find_if(plot_row.begin(), plot_row.end(), [](auto &a) { return a.is_grouped == false; })) !=
+        while ((itr = std::find_if(plot_row.begin(), plot_row.end(), [](auto &a) { return !a.is_grouped; })) !=
                plot_row.end()) {
             size_t x = std::distance(plot_row.begin(), itr);
             plot_groups.emplace_back();
             fence_groups.emplace_back();
             grow_group(plot_map, plot_groups.back(), xy_pos_t{ x, y }, dim, fence_groups.back());
-            //std::cout << fence_lengths.back() << '\n';
         }
         y++;
     }
@@ -186,13 +185,14 @@ int group_plots(plot_map_t &plot_map)
         price_sum_part2 += area * count_sides;
     }
 
-    return price_sum_part2;
+    return { price_sum_part1, price_sum_part2 };
 }
 
 int main()
 {
     auto plot_map = read_file();
 
-    int price_sum = group_plots(plot_map);
-    std::cout << price_sum << '\n';
+    auto [price_sum_part1, price_sum_part2] = group_plots(plot_map);
+    std::cout << price_sum_part1 << '\n';
+    std::cout << price_sum_part2 << '\n';
 }
