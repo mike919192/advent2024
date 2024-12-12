@@ -58,7 +58,7 @@ static constexpr std::array<xy_pos_t, 4> grow_dirs = { xy_pos_t{ 1, 0 }, xy_pos_
 
 plot_map_t read_file()
 {
-    std::ifstream infile("test.txt");
+    std::ifstream infile("input.txt");
     plot_map_t csv_rows;
     int y{ 0 };
 
@@ -88,10 +88,11 @@ int count_fence_sides(fence_row_t &fence_group)
     int count_sides{ 0 };
 
     while ((itr1 = std::find_if(fence_group.begin(), fence_group.end(), find_beginning)) != fence_group.end()) {
+        auto save_itr1 = itr1;
         (*itr1).is_traced = true;
         fence_row_t::iterator itr2;
         bool begin_to_end{ true };
-        count_sides++;
+        //count_sides++;
 
         auto connect_fence = [&itr1, &begin_to_end](const fence_segment &a) {
             if (begin_to_end)
@@ -101,12 +102,24 @@ int count_fence_sides(fence_row_t &fence_group)
         };
 
         while ((itr2 = std::find_if(fence_group.begin(), fence_group.end(), connect_fence)) != fence_group.end()) {
+            //check if there is a second match
+            //if there is then there is an intersection
+            //in that case we want to change direction
+            auto itr3 = std::find_if(std::next(itr2, 1), fence_group.end(), connect_fence);
+            if (itr3 != fence_group.end() && (*itr3).direction != (*itr1).direction) {
+                itr2 = itr3;
+            }
+
             (*itr2).is_traced = true;
             begin_to_end = ((*itr1).end == (*itr2).start) || ((*itr1).start == (*itr2).start);
             if ((*itr1).direction != (*itr2).direction)
                 count_sides++;
             itr1 = itr2;
         }
+
+        //we reached the end check if there is one more corner
+        if ((*save_itr1).direction != (*itr1).direction)
+            count_sides++;
     }
 
     return count_sides;
