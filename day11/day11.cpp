@@ -22,7 +22,7 @@ struct std::hash<stone> {
         // and combine them using XOR
         // and bit shifting:
 
-        return ((hash<num_type_t>()(k.value) ^ (hash<int>()(k.iteration) << 1)) >> 1);
+        return hash<num_type_t>{}(k.value) ^ (hash<int>{}(k.iteration) << 1);
     }
 };
 
@@ -72,7 +72,7 @@ std::tuple<num_type_t, num_type_t> split_num(num_type_t num)
 
 num_type_t stone_eval(stone a_stone, num_type_t max_iter, std::unordered_map<stone, num_type_t> &umap)
 {
-    //if we reached max_iter then remove it
+    //if we reached max_iter then return 1
     if (a_stone.iteration >= max_iter) {
         return 1;
     }
@@ -109,11 +109,11 @@ num_type_t stone_eval(stone a_stone, num_type_t max_iter, std::unordered_map<sto
 
 int main()
 {
-    auto stones_part = read_file();
+    auto stones = read_file();
     std::unordered_map<stone, num_type_t> umap;
 
     num_type_t sum_part1{ 0 };
-    for (const auto &a_stone : stones_part) {
+    for (const auto &a_stone : stones) {
         sum_part1 += stone_eval(a_stone, 25, umap);
     }
 
@@ -122,7 +122,7 @@ int main()
     std::unordered_map<stone, num_type_t> umap2;
 
     num_type_t sum_part2{ 0 };
-    for (const auto &a_stone : stones_part) {
+    for (const auto &a_stone : stones) {
         sum_part2 += stone_eval(a_stone, 75, umap2);
     }
 
