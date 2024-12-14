@@ -84,7 +84,7 @@ void print_robots(std::ostream &out, robot_list_t &robots, xy_pos_t dim, int sec
     std::vector<std::string> print_output;
     print_output.reserve(dim.second);
 
-    for (int y = 0; y < dim.second; y++) {
+    for (int y : std::views::iota(0, dim.second)) {
         print_output.emplace_back(dim.first, '.');
     }
 
@@ -97,7 +97,7 @@ void print_robots(std::ostream &out, robot_list_t &robots, xy_pos_t dim, int sec
     }
 
     for (const auto &line : print_output) {
-        out << line << "\n";
+        out << line << '\n';
     }
 }
 
