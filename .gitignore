@@ -1,4 +1,5 @@
 .vscode/settings.json
 */input.txt
+*/output.txt
 day[0-9]/day[0-9]
 day[0-9][0-9]/day[0-9][0-9]
