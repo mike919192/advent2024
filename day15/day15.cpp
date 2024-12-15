@@ -39,6 +39,12 @@ struct box {
     box(xy_pos_t pos) : pos1(pos), pos2(pos)
     {
     }
+
+    box(xy_pos_t pos1, xy_pos_t pos2) : pos1(pos1), pos2(pos2)
+    {
+    }
+
+    bool operator==(const box &) const = default;
 };
 
 struct robot {
@@ -50,6 +56,7 @@ using warehouse_map_t = std::vector<warehouse_row_t>;
 using move_list_t = std::vector<xy_pos_t>;
 using box_list_t = std::vector<box>;
 
+template <bool part2_t = false>
 std::tuple<warehouse_map_t, box_list_t, robot, move_list_t> read_file()
 {
     std::ifstream infile("input.txt");
@@ -71,17 +78,31 @@ std::tuple<warehouse_map_t, box_list_t, robot, move_list_t> read_file()
             switch (value) {
             case '#':
                 row.push_back(cell{ .has_wall = true });
+                if (part2_t)
+                    row.push_back(cell{ .has_wall = true });
                 break;
             case 'O':
                 row.push_back(cell{});
-                boxes.push_back(box(xy_pos_t{ x, y }));
+                if (part2_t) {
+                    row.push_back(cell{});
+                    boxes.push_back(box(xy_pos_t{ 2 * x, y }, xy_pos_t{ 2 * x + 1, y }));
+                } else {
+                    boxes.push_back(box(xy_pos_t{ x, y }));
+                }
                 break;
             case '.':
                 row.push_back(cell{});
+                if (part2_t)
+                    row.push_back(cell{});
                 break;
             case '@':
                 row.push_back(cell{});
-                rob.pos = xy_pos_t{ x, y };
+                if (part2_t) {
+                    row.push_back(cell{});
+                    rob.pos = xy_pos_t{ 2 * x, y };
+                } else {
+                    rob.pos = xy_pos_t{ x, y };
+                }
                 break;
             default:
                 throw std::runtime_error("Error parsing logic!");
@@ -122,24 +143,50 @@ std::tuple<warehouse_map_t, box_list_t, robot, move_list_t> read_file()
 bool peek_box_push(warehouse_map_t &map, box_list_t &boxes, box &b, xy_pos_t move)
 {
     xy_pos_t pos1_push = b.pos1 + move;
-    if (map.at(pos1_push.second).at(pos1_push.first).has_wall)
+    xy_pos_t pos2_push = b.pos2 + move;
+    if (map.at(pos1_push.second).at(pos1_push.first).has_wall || map.at(pos2_push.second).at(pos2_push.first).has_wall)
         return false;
     //see if there is any boxes we push into
-    auto itr = std::find_if(boxes.begin(), boxes.end(), [pos1_push](auto &a) { return a.pos1 == pos1_push; });
+    auto itr = std::find_if(boxes.begin(), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
+        return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
+    });
     if (itr == boxes.end())
         return true;
-    else
-        return peek_box_push(map, boxes, (*itr), move);
+    else {
+        bool push = peek_box_push(map, boxes, (*itr), move);
+        //check if there is a second one
+        auto itr2 = std::find_if(std::next(itr, 1), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
+            return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
+        });
+
+        if (itr2 != boxes.end()) {
+            push &= peek_box_push(map, boxes, (*itr2), move);
+        }
+
+        return push;
+    }
 }
 
 void do_box_push(warehouse_map_t &map, box_list_t &boxes, box &b, xy_pos_t move)
 {
     xy_pos_t pos1_push = b.pos1 + move;
-    
+    xy_pos_t pos2_push = b.pos2 + move;
+
     //see if there is any boxes we push into
-    auto itr = std::find_if(boxes.begin(), boxes.end(), [pos1_push](auto &a) { return a.pos1 == pos1_push; });
-    if (itr != boxes.end())
+    auto itr = std::find_if(boxes.begin(), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
+        return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
+    });
+    if (itr != boxes.end()) {
         do_box_push(map, boxes, (*itr), move);
+        //check if there is a second one
+        auto itr2 = std::find_if(std::next(itr, 1), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
+            return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
+        });
+
+        if (itr2 != boxes.end()) {
+            do_box_push(map, boxes, (*itr2), move);
+        }
+    }
 
     b.pos1 = b.pos1 + move;
     b.pos2 = b.pos2 + move;
@@ -154,7 +201,8 @@ void execute_move(warehouse_map_t &map, box_list_t &boxes, robot &rob, xy_pos_t 
     if (look_ahead_cell.has_wall)
         return;
 
-    auto itr = std::find_if(boxes.begin(), boxes.end(), [look_ahead](auto &a) { return a.pos1 == look_ahead; });
+    auto itr = std::find_if(boxes.begin(), boxes.end(),
+                            [look_ahead](auto &a) { return a.pos1 == look_ahead || a.pos2 == look_ahead; });
 
     //no boxes so just move into empty space
     if (itr == boxes.end()) {
@@ -202,10 +250,10 @@ void print_map(const warehouse_map_t &map, const box_list_t &boxes, const robot 
     }
 }
 
-long score_map(const box_list_t & boxes)
+long score_map(const box_list_t &boxes)
 {
     long score{ 0 };
-    for (const auto & box : boxes)
+    for (const auto &box : boxes)
         score += box.pos1.second * 100 + box.pos1.first;
 
     return score;
@@ -225,4 +273,16 @@ int main()
 
     long score = score_map(boxes);
     std::cout << score << '\n';
+
+    auto [map2, boxes2, rob2, moves2] = read_file<true>();
+    int iteration2{ 0 };
+    //print_map(map2, boxes2, rob2, iteration2, xy_pos_t{ 0, 0 });
+    for (const auto &move2 : moves2) {
+        iteration2++;
+        execute_move(map2, boxes2, rob2, move2);
+        //print_map(map2, boxes2, rob2, iteration2, move2);
+    }
+
+    long score2 = score_map(boxes2);
+    std::cout << score2 << '\n';
 }
