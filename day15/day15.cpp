@@ -85,9 +85,9 @@ std::tuple<warehouse_map_t, box_list_t, robot, move_list_t> read_file()
                 row.push_back(cell{});
                 if (part2_t) {
                     row.push_back(cell{});
-                    boxes.push_back(box(xy_pos_t{ 2 * x, y }, xy_pos_t{ 2 * x + 1, y }));
+                    boxes.emplace_back(xy_pos_t{ 2 * x, y }, xy_pos_t{ 2 * x + 1, y });
                 } else {
-                    boxes.push_back(box(xy_pos_t{ x, y }));
+                    boxes.emplace_back(xy_pos_t{ x, y });
                 }
                 break;
             case '.':
@@ -120,16 +120,16 @@ std::tuple<warehouse_map_t, box_list_t, robot, move_list_t> read_file()
         while (ss >> value) {
             switch (value) {
             case '>':
-                moves.push_back(xy_pos_t{ 1, 0 });
+                moves.emplace_back(1, 0);
                 break;
             case 'v':
-                moves.push_back(xy_pos_t{ 0, 1 });
+                moves.emplace_back(0, 1);
                 break;
             case '<':
-                moves.push_back(xy_pos_t{ -1, 0 });
+                moves.emplace_back(-1, 0);
                 break;
             case '^':
-                moves.push_back(xy_pos_t{ 0, -1 });
+                moves.emplace_back(0, -1);
                 break;
             default:
                 throw std::runtime_error("Error parsing logic!");
