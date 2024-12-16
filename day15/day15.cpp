@@ -144,20 +144,23 @@ bool peek_box_push(warehouse_map_t &map, box_list_t &boxes, box &b, xy_pos_t mov
 {
     xy_pos_t pos1_push = b.pos1 + move;
     xy_pos_t pos2_push = b.pos2 + move;
+
+    auto find_next_box = [pos1_push, pos2_push, &b](auto &a) {
+        return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
+    };
+
+    //if either push into wall the push fails
     if (map.at(pos1_push.second).at(pos1_push.first).has_wall || map.at(pos2_push.second).at(pos2_push.first).has_wall)
         return false;
+
     //see if there is any boxes we push into
-    auto itr = std::find_if(boxes.begin(), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
-        return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
-    });
+    auto itr = std::find_if(boxes.begin(), boxes.end(), find_next_box);
     if (itr == boxes.end())
         return true;
     else {
         bool push = peek_box_push(map, boxes, (*itr), move);
         //check if there is a second one
-        auto itr2 = std::find_if(std::next(itr, 1), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
-            return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
-        });
+        auto itr2 = std::find_if(std::next(itr, 1), boxes.end(), find_next_box);
 
         if (itr2 != boxes.end()) {
             push &= peek_box_push(map, boxes, (*itr2), move);
@@ -172,16 +175,16 @@ void do_box_push(warehouse_map_t &map, box_list_t &boxes, box &b, xy_pos_t move)
     xy_pos_t pos1_push = b.pos1 + move;
     xy_pos_t pos2_push = b.pos2 + move;
 
-    //see if there is any boxes we push into
-    auto itr = std::find_if(boxes.begin(), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
+    auto find_next_box = [pos1_push, pos2_push, &b](auto &a) {
         return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
-    });
+    };
+
+    //see if there is any boxes we push into
+    auto itr = std::find_if(boxes.begin(), boxes.end(), find_next_box);
     if (itr != boxes.end()) {
         do_box_push(map, boxes, (*itr), move);
         //check if there is a second one
-        auto itr2 = std::find_if(std::next(itr, 1), boxes.end(), [pos1_push, pos2_push, &b](auto &a) {
-            return a != b && (a.pos1 == pos1_push || a.pos2 == pos1_push || a.pos1 == pos2_push || a.pos2 == pos2_push);
-        });
+        auto itr2 = std::find_if(std::next(itr, 1), boxes.end(), find_next_box);
 
         if (itr2 != boxes.end()) {
             do_box_push(map, boxes, (*itr2), move);
@@ -194,11 +197,10 @@ void do_box_push(warehouse_map_t &map, box_list_t &boxes, box &b, xy_pos_t move)
 
 void execute_move(warehouse_map_t &map, box_list_t &boxes, robot &rob, xy_pos_t move)
 {
-    //look in the direction of the move until we find either open space or wall
     xy_pos_t look_ahead = rob.pos + move;
-    cell look_ahead_cell = map.at(look_ahead.second).at(look_ahead.first);
 
-    if (look_ahead_cell.has_wall)
+    //look ahead is a wall so we can do nothing and return
+    if (map.at(look_ahead.second).at(look_ahead.first).has_wall)
         return;
 
     auto itr = std::find_if(boxes.begin(), boxes.end(),
