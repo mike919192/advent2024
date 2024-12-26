@@ -15,6 +15,7 @@ struct cell {
     bool has_wall{ false };
     bool is_visited{ false };
     long score = std::numeric_limits<long>::max();
+    xy_pos_t dir {0, 0};
 };
 
 struct endpoint {
@@ -87,8 +88,12 @@ bool visit_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, std::
             map.at(next_pos.second).at(next_pos.first).is_visited)
             continue;
         long score = state.score + (dir == state.dir ? 1 : 1001);
-        map.at(next_pos.second).at(next_pos.first).score =
-            std::min(score, map.at(next_pos.second).at(next_pos.first).score);
+        if (score < map.at(next_pos.second).at(next_pos.first).score) {
+            map.at(next_pos.second).at(next_pos.first).score = score;
+            map.at(next_pos.second).at(next_pos.first).dir = dir;
+        }
+        //map.at(next_pos.second).at(next_pos.first).score =
+        //    std::min(score, map.at(next_pos.second).at(next_pos.first).score);
         sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score });
     }
 
@@ -101,8 +106,11 @@ bool visit_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, std::
     state = *new_source;
     sources.erase(new_source);
 
-    if (state.pos == end)
+    if (state.pos == end) {
+        map.at(state.pos.second).at(state.pos.first).score = state.score;
+        map.at(state.pos.second).at(state.pos.first).dir = state.dir;
         return false;
+    }
 
     return true;
 }
@@ -116,22 +124,27 @@ bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, s
         if (map.at(next_pos.second).at(next_pos.first).has_wall ||
             map.at(next_pos.second).at(next_pos.first).is_visited)
             continue;
-        long score1 = state.score - 1; // (dir == state.dir ? 1 : 1001);
-        long score2 = state.score - 1001; //(dir == state.dir ? 1 : 1001);
-        if (map.at(next_pos.second).at(next_pos.first).score == score1) {
-            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score1 });
+        
+        //long score1 = state.score - 1; // (dir == state.dir ? 1 : 1001);
+        //long score2 = state.score - 1001; //(dir == state.dir ? 1 : 1001);
+        if (map.at(next_pos.second).at(next_pos.first).dir == dir) {
+            if (map.at(next_pos.second).at(next_pos.first).score == state.score - 1) {
+            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = state.score - 1 });
             auto itr = std::find(path_points.begin(), path_points.end(), next_pos);
             if (itr == path_points.end()) {
                 std::cout << "Counting x:" << next_pos.first << " y:" << next_pos.second << "\n";
                 path_points.push_back(next_pos);
             }
-        } else if (map.at(next_pos.second).at(next_pos.first).score == score2) {
-            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score1 });
-            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score2 });
+            }
+        } else {
+            if (map.at(next_pos.second).at(next_pos.first).score == state.score - 1001) {
+            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = state.score - 1 });
+            sources.push_back(reindeer_state{ .pos = next_pos, .dir = map.at(next_pos.second).at(next_pos.first).dir, .score = state.score - 1001 });
             auto itr = std::find(path_points.begin(), path_points.end(), next_pos);
             if (itr == path_points.end()) {
                 std::cout << "Counting x:" << next_pos.first << " y:" << next_pos.second << "\n";
                 path_points.push_back(next_pos);
+            }
             }
         }
     }
@@ -150,8 +163,8 @@ bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, s
 
     //count++;
 
-    if (state.pos == end)
-        return false;
+    //if (state.pos == end)
+    //    return false;
 
     return true;
 }
@@ -167,8 +180,18 @@ void print_path(const maze_map_t &map, const std::vector<xy_pos_t> &points)
         for (size_t x : std::views::iota(0u, map.at(y).size())) {
             if (map.at(y).at(x).has_wall)
                 print_output.at(y).push_back('#');
-            else
-                print_output.at(y).push_back('.');
+            else {
+                // if (map.at(y).at(x).dir == xy_pos_t {1, 0})
+                //     print_output.at(y).push_back('>');
+                // else if (map.at(y).at(x).dir == xy_pos_t {0, 1})
+                //     print_output.at(y).push_back('v');
+                // else if (map.at(y).at(x).dir == xy_pos_t {-1, 0})
+                //     print_output.at(y).push_back('<');
+                // else if (map.at(y).at(x).dir == xy_pos_t {0, -1})
+                //     print_output.at(y).push_back('^');
+                // else
+                    print_output.at(y).push_back('.');
+            }
         }
     }
 
@@ -191,6 +214,7 @@ int main()
     std::vector<reindeer_state> branches;
     reindeer_state state{ .pos = start };
     map.at(start.second).at(start.first).score = 0;
+    map.at(start.second).at(start.first).dir = xy_pos_t{1, 0};
     std::list<reindeer_state> sources;
 
     while (visit_neighbors(map, state, end, sources)) {
