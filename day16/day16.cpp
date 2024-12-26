@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <list>
 #include <iostream>
+#include <ranges>
 #include "advent.h"
 
 struct cell {
@@ -34,7 +35,7 @@ static constexpr std::array<xy_pos_t, 4> move_dirs = { xy_pos_t{ 1, 0 }, xy_pos_
 
 std::tuple<maze_map_t, xy_pos_t, xy_pos_t> read_file()
 {
-    std::ifstream infile("test.txt");
+    std::ifstream infile("input.txt");
     maze_map_t csv_rows;
     xy_pos_t start;
     xy_pos_t end;
@@ -106,7 +107,8 @@ bool visit_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, std::
     return true;
 }
 
-bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, std::list<reindeer_state> &sources, std::vector<xy_pos_t> & path_points)
+bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, std::list<reindeer_state> &sources,
+                         std::vector<xy_pos_t> &path_points)
 {
     //update score of neighbors
     for (auto dir : move_dirs) {
@@ -114,12 +116,12 @@ bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, s
         if (map.at(next_pos.second).at(next_pos.first).has_wall ||
             map.at(next_pos.second).at(next_pos.first).is_visited)
             continue;
-        long score1 = state.score - 1;// (dir == state.dir ? 1 : 1001);
-        long score2 = state.score - 1001;//(dir == state.dir ? 1 : 1001);
+        long score1 = state.score - 1; // (dir == state.dir ? 1 : 1001);
+        long score2 = state.score - 1001; //(dir == state.dir ? 1 : 1001);
         if (map.at(next_pos.second).at(next_pos.first).score == score1) {
-            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score1 });            
+            sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score1 });
             auto itr = std::find(path_points.begin(), path_points.end(), next_pos);
-            if (itr == path_points.end()){
+            if (itr == path_points.end()) {
                 std::cout << "Counting x:" << next_pos.first << " y:" << next_pos.second << "\n";
                 path_points.push_back(next_pos);
             }
@@ -127,7 +129,7 @@ bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, s
             sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score1 });
             sources.push_back(reindeer_state{ .pos = next_pos, .dir = dir, .score = score2 });
             auto itr = std::find(path_points.begin(), path_points.end(), next_pos);
-            if (itr == path_points.end()){
+            if (itr == path_points.end()) {
                 std::cout << "Counting x:" << next_pos.first << " y:" << next_pos.second << "\n";
                 path_points.push_back(next_pos);
             }
@@ -152,6 +154,34 @@ bool backtrack_neighbors(maze_map_t &map, reindeer_state &state, xy_pos_t end, s
         return false;
 
     return true;
+}
+
+void print_path(const maze_map_t &map, const std::vector<xy_pos_t> &points)
+{
+    std::ofstream out("output.txt");
+    std::vector<std::vector<char>> print_output;
+    print_output.reserve(map.size());
+
+    for (size_t y : std::views::iota(0u, map.size())) {
+        print_output.emplace_back();
+        for (size_t x : std::views::iota(0u, map.at(y).size())) {
+            if (map.at(y).at(x).has_wall)
+                print_output.at(y).push_back('#');
+            else
+                print_output.at(y).push_back('.');
+        }
+    }
+
+    for (const auto &point : points) {
+        print_output.at(point.second).at(point.first) = 'O';
+    }
+
+    for (const auto &line : print_output) {
+        for (const auto &ch : line) {
+            out << ch;
+        }
+        out << '\n';
+    }
 }
 
 int main()
@@ -180,4 +210,6 @@ int main()
     }
 
     std::cout << path_points.size() << '\n';
+
+    print_path(map, path_points);
 }
