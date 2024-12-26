@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <utility>
 
 template <typename T, typename U, typename V, typename W>
