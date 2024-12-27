@@ -5,15 +5,16 @@
 #include <vector>
 #include <tuple>
 #include <iostream>
+#include <ranges>
 
 using int_row_t = std::vector<long>;
 using int_rows_t = std::vector<int_row_t>;
 
-std::tuple<int_row_t, int_rows_t> read_file()
+std::tuple<int_row_t, int_row_t> read_file()
 {
     std::ifstream infile("input.txt");
     int_row_t registers;
-    int_rows_t program;
+    int_row_t program;
 
     for (std::string line; std::getline(infile, line);) {
         auto colon_pos = line.find(':');
@@ -37,14 +38,12 @@ std::tuple<int_row_t, int_rows_t> read_file()
     long value2{ 0 };
     char comma{ 0 };
     ss >> value1 >> comma >> value2;
-    program.emplace_back();
-    program.back().push_back(value1);
-    program.back().push_back(value2);
+    program.push_back(value1);
+    program.push_back(value2);
 
     while (ss >> comma >> value1 >> comma >> value2) {
-        program.emplace_back();
-        program.back().push_back(value1);
-        program.back().push_back(value2);
+        program.push_back(value1);
+        program.push_back(value2);
     }
 
     return { registers, program };
@@ -75,13 +74,16 @@ long two_raised_to(long power)
     return 2 << (power - 1);
 }
 
-void decode_and_execute(long operate, long operand, int_row_t &registers, size_t &instr_ptr)
+void decode_and_execute(long operate, long operand, int_row_t &registers, size_t &instr_ptr, int_row_t &output)
 {
     switch (operate) {
     case 0: {
         long value = decode_combo(operand, registers);
         long result = two_raised_to(value);
-        registers.at(0) = registers.at(0) / result;
+        if (result == 0)
+            output.push_back(-1);
+        else
+            registers.at(0) = registers.at(0) / result;
         instr_ptr++;
         break;
     }
@@ -115,21 +117,27 @@ void decode_and_execute(long operate, long operand, int_row_t &registers, size_t
     case 5: {
         long value = decode_combo(operand, registers);
         long result = value % 8;
-        std::cout << result << ',';
+        output.push_back(result);
         instr_ptr++;
         break;
     }
     case 6: {
         long value = decode_combo(operand, registers);
         long result = two_raised_to(value);
-        registers.at(1) = registers.at(0) / result;
+        if (result == 0)
+            output.push_back(-1);
+        else
+            registers.at(1) = registers.at(0) / result;
         instr_ptr++;
         break;
     }
     case 7: {
         long value = decode_combo(operand, registers);
         long result = two_raised_to(value);
-        registers.at(2) = registers.at(0) / result;
+        if (result == 0)
+            output.push_back(-1);
+        else
+            registers.at(2) = registers.at(0) / result;
         instr_ptr++;
         break;
     }
@@ -141,12 +149,48 @@ void decode_and_execute(long operate, long operand, int_row_t &registers, size_t
 int main()
 {
     auto [registers, program] = read_file();
+    int_row_t registers2 = registers;
 
     size_t instr_ptr{ 0 };
+    int_row_t part1_output;
 
-    while (instr_ptr < program.size()) {
-        long operate = program.at(instr_ptr).at(0);
-        long operand = program.at(instr_ptr).at(1);
-        decode_and_execute(operate, operand, registers, instr_ptr);
+    while (2 * instr_ptr < program.size()) {
+        long operate = program.at(2 * instr_ptr);
+        long operand = program.at(2 * instr_ptr + 1);
+        decode_and_execute(operate, operand, registers, instr_ptr, part1_output);
     }
+
+    std::cout << part1_output.at(0);
+    for (size_t i : std::views::iota(1u, part1_output.size()))
+        std::cout << ',' << part1_output.at(i);
+
+    std::cout << '\n';
+
+    //part 2
+    long a_register{ 0 };
+    while (true) {
+        int_row_t try_registers = registers2;
+        try_registers.at(0) = a_register;
+        int_row_t part2_output;
+
+        instr_ptr = 0;
+        while (2 * instr_ptr < program.size()) {
+            long operate = program.at(2 * instr_ptr);
+            long operand = program.at(2 * instr_ptr + 1);
+            decode_and_execute(operate, operand, try_registers, instr_ptr, part2_output);
+            if (part2_output.empty())
+                continue;
+            if (part2_output.size() > program.size())
+                break;
+            bool equals = std::equal(part2_output.begin(), part2_output.end(), program.begin());
+            if (!equals)
+                break;
+        }
+        if (program.size() == part2_output.size() &&
+            std::equal(part2_output.begin(), part2_output.end(), program.begin()))
+            break;
+        a_register++;
+    }
+
+    std::cout << a_register << '\n';
 }
