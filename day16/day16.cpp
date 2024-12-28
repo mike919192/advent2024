@@ -9,7 +9,7 @@
 #include <list>
 #include <iostream>
 #include <ranges>
-#include "advent.h"
+#include "advent.hpp"
 
 struct cell {
     bool has_wall{ false };
