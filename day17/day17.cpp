@@ -6,6 +6,7 @@
 #include <tuple>
 #include <iostream>
 #include <ranges>
+#include <cmath>
 
 using int_row_t = std::vector<long>;
 using int_rows_t = std::vector<int_row_t>;
@@ -71,7 +72,7 @@ long decode_combo(long operand, int_row_t &registers)
 
 long two_raised_to(long power)
 {
-    return 2 << (power - 1);
+    return std::lround(std::pow(2.0, power));
 }
 
 void decode_and_execute(long operate, long operand, int_row_t &registers, size_t &instr_ptr, int_row_t &output)
@@ -167,7 +168,9 @@ int main()
     std::cout << '\n';
 
     //part 2
-    long a_register{ 0 };
+    long a_register{ 07461160522621000 };
+    long size_match{2};
+    bool print {false};
     while (true) {
         int_row_t try_registers = registers2;
         try_registers.at(0) = a_register;
@@ -182,14 +185,37 @@ int main()
                 continue;
             if (part2_output.size() > program.size())
                 break;
-            bool equals = std::equal(part2_output.begin(), part2_output.end(), program.begin());
-            if (!equals)
-                break;
+            bool equals = std::equal(part2_output.rbegin(), part2_output.rend(), program.rbegin());
+            if (part2_output.size() >= 16 && equals) {
+                //std::cout << "HERE" << '\n';
+                //size_match++;
+                //break;
+                print = true;
+            } else {
+                print = false;
+            }
         }
-        if (program.size() == part2_output.size() &&
-            std::equal(part2_output.begin(), part2_output.end(), program.begin()))
+        //if (program.size() == part2_output.size() &&
+        //    std::equal(part2_output.begin(), part2_output.end(), program.begin()))
+        //    break;
+        if (print) {
+            std::cout << part2_output.at(0);
+            for (size_t i : std::views::iota(1u, part2_output.size()))
+                std::cout << ',' << part2_output.at(i);
+
+            std::cout << '\n';
+            std::cout << a_register << '\n';
+        }
+        print = false;
+        //std::cout << part2_output.at(0);
+        //for (size_t i : std::views::iota(1u, part2_output.size()))
+        //    std::cout << ',' << part2_output.at(i);
+
+        //std::cout << '\n';
+        // std::cout << a_register << '\n';
+        if (a_register > 010143404522621633)
             break;
-        a_register++;
+        a_register = a_register + 1;//(1l << (3l * 2l));        
     }
 
     std::cout << a_register << '\n';
