@@ -168,10 +168,10 @@ int main()
     std::cout << '\n';
 
     //part 2
-    long a_register{ 07461160522621000 };
-    long size_match{2};
-    bool print {false};
-    while (true) {
+    long a_register{ 0 };
+    size_t size_match{ 2 };
+    bool found{ false };
+    while (size_match <= 16) {
         int_row_t try_registers = registers2;
         try_registers.at(0) = a_register;
         int_row_t part2_output;
@@ -181,42 +181,22 @@ int main()
             long operate = program.at(2 * instr_ptr);
             long operand = program.at(2 * instr_ptr + 1);
             decode_and_execute(operate, operand, try_registers, instr_ptr, part2_output);
-            if (part2_output.empty())
-                continue;
-            if (part2_output.size() > program.size())
-                break;
-            bool equals = std::equal(part2_output.rbegin(), part2_output.rend(), program.rbegin());
-            if (part2_output.size() >= 16 && equals) {
-                //std::cout << "HERE" << '\n';
-                //size_match++;
-                //break;
-                print = true;
-            } else {
-                print = false;
-            }
+            if (part2_output.size() >= size_match &&
+                std::equal(part2_output.rbegin(), part2_output.rend(), program.rbegin()))
+                found = true;
         }
-        //if (program.size() == part2_output.size() &&
-        //    std::equal(part2_output.begin(), part2_output.end(), program.begin()))
-        //    break;
-        if (print) {
+        if (found) {
             std::cout << part2_output.at(0);
             for (size_t i : std::views::iota(1u, part2_output.size()))
                 std::cout << ',' << part2_output.at(i);
 
             std::cout << '\n';
             std::cout << a_register << '\n';
+            size_match += 2;
+            a_register = a_register << 2l * 3l;
+        } else {
+            a_register++;
         }
-        print = false;
-        //std::cout << part2_output.at(0);
-        //for (size_t i : std::views::iota(1u, part2_output.size()))
-        //    std::cout << ',' << part2_output.at(i);
-
-        //std::cout << '\n';
-        // std::cout << a_register << '\n';
-        if (a_register > 010143404522621633)
-            break;
-        a_register = a_register + 1;//(1l << (3l * 2l));        
+        found = false;
     }
-
-    std::cout << a_register << '\n';
 }
