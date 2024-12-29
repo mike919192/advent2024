@@ -63,10 +63,10 @@ maze_map_t build_map(const int_rows_t &bytes, xy_pos_t dim, int num)
 
     int i{ 0 };
     for (const auto &byte : bytes) {
-        map.at(byte.at(1)).at(byte.at(0)).has_wall = true;
-        i++;
         if (i >= num)
             break;
+        map.at(byte.at(1)).at(byte.at(0)).has_wall = true;
+        i++;
     }
 
     return map;
@@ -96,6 +96,10 @@ bool visit_neighbors(maze_map_t &map, cell_state &state, xy_pos_t end, std::list
     //choose new source
     auto new_source =
         std::min_element(sources.begin(), sources.end(), [](auto &a, auto &b) { return a.score < b.score; });
+
+    //ran out of options so no path found
+    if (new_source == sources.end())
+        return false;
 
     state = *new_source;
     sources.erase(new_source);
@@ -131,4 +135,20 @@ int main()
     }
 
     std::cout << state.score << '\n';
+
+    //part2
+    for (size_t i : std::views::iota(static_cast<uint>(num_bytes), bytes.size())) {
+        auto map2 = build_map(bytes, dim, i);
+        cell_state state2{ .pos = start };
+        map2.at(start.second).at(start.first).score = 0;
+        std::list<cell_state> sources2;
+
+        while (visit_neighbors(map2, state2, end, sources2, dim)) {
+        }
+
+        if (state2.pos != end) {
+            std::cout << bytes.at(i - 1).at(0) << ", " << bytes.at(i - 1).at(1) << '\n';
+            break;
+        }
+    }
 }
