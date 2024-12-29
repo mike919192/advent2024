@@ -22,3 +22,8 @@ auto operator-(const std::pair<T, U> &l)
 }
 
 using xy_pos_t = std::pair<int, int>;
+
+inline bool is_pos_on_map(xy_pos_t pos, xy_pos_t dim)
+{
+    return !(pos.first < 0 || pos.second < 0 || pos.first >= dim.first || pos.second >= dim.second);
+}
