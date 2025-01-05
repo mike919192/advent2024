@@ -5,8 +5,6 @@
 #include <vector>
 #include <limits>
 #include <array>
-#include <list>
-#include <numeric>
 #include <iostream>
 #include "advent.hpp"
 
@@ -19,6 +17,9 @@ struct cell {
 
 using maze_row_t = std::vector<cell>;
 using maze_map_t = std::vector<maze_row_t>;
+
+template <size_t n_t>
+using cheatmap_t = std::array<std::array<long, n_t>, n_t>;
 
 struct racer_state {
     xy_pos_t pos{ 0, 0 };
@@ -34,9 +35,6 @@ struct shortcut {
 
 static constexpr std::array<xy_pos_t, 4> move_dirs = { xy_pos_t{ 1, 0 }, xy_pos_t{ 0, 1 }, xy_pos_t{ -1, 0 },
                                                        xy_pos_t{ 0, -1 } };
-
-static constexpr std::array<xy_pos_t, 4> shortcut_dirs = { xy_pos_t{ 2, 0 }, xy_pos_t{ 0, 2 }, xy_pos_t{ -2, 0 },
-                                                           xy_pos_t{ 0, -2 } };
 
 std::tuple<maze_map_t, xy_pos_t, xy_pos_t> read_file()
 {
@@ -108,18 +106,28 @@ bool trace_track(maze_map_t &map, racer_state &state, xy_pos_t end)
     return true;
 }
 
-bool find_shortcuts(maze_map_t &map, racer_state &state, xy_pos_t dim, xy_pos_t end, std::vector<shortcut> &shortcuts)
+template <size_t n_t>
+bool find_shortcuts(const maze_map_t &map, racer_state &state, xy_pos_t dim, xy_pos_t end,
+                    std::vector<shortcut> &shortcuts, const cheatmap_t<n_t> &cheatmap, long limit)
 {
+    static constexpr int n = static_cast<int>(n_t - 1);
     //check for any shortcuts
-    for (auto cut_dir : shortcut_dirs) {
-        xy_pos_t cut_pos = state.pos + cut_dir;
-        if (!is_pos_on_map(cut_pos, dim) || map.at(cut_pos.second).at(cut_pos.first).has_wall)
-            continue;
-        long cut_score = map.at(cut_pos.second).at(cut_pos.first).score;
-        long current_score = map.at(state.pos.second).at(state.pos.first).score;
-        if (cut_score - current_score > 2)
-            shortcuts.push_back(
-                shortcut{ .start = state.pos, .end = cut_pos, .time_saved = cut_score - current_score - 2 });
+    for (int j = -n; j <= n; j++) {
+        for (int i = -n; i <= n; i++) {
+            size_t abs_i = std::abs(i);
+            size_t abs_j = std::abs(j);
+            if (cheatmap.at(abs_j).at(abs_i) == std::numeric_limits<long>::max())
+                continue;
+            xy_pos_t cut_pos = state.pos + xy_pos_t{ i, j };
+            if (!is_pos_on_map(cut_pos, dim) || map.at(cut_pos.second).at(cut_pos.first).has_wall)
+                continue;
+            long cut_score = map.at(cut_pos.second).at(cut_pos.first).score;
+            long current_score = map.at(state.pos.second).at(state.pos.first).score;
+            long cheatmap_score = cheatmap.at(abs_j).at(abs_i);
+            if (cut_score - current_score - cheatmap_score >= limit)
+                shortcuts.push_back(shortcut{
+                    .start = state.pos, .end = cut_pos, .time_saved = cut_score - current_score - cheatmap_score });
+        }
     }
 
     //get the direction and update the state
@@ -136,6 +144,21 @@ bool find_shortcuts(maze_map_t &map, racer_state &state, xy_pos_t dim, xy_pos_t 
     return true;
 }
 
+template <size_t n_t>
+constexpr cheatmap_t<n_t + 1> create_cheatmap()
+{
+    std::array<std::array<long, n_t + 1>, n_t + 1> cheatmap{ 0 };
+    for (size_t j = 0; j < cheatmap.size(); j++) {
+        for (size_t i = 0; i < cheatmap.at(j).size(); i++) {
+            if (i + j > n_t)
+                cheatmap.at(j).at(i) = std::numeric_limits<long>::max();
+            else
+                cheatmap.at(j).at(i) = i + j;
+        }
+    }
+    return cheatmap;
+}
+
 int main()
 {
     auto [map, start, end] = read_file();
@@ -146,13 +169,21 @@ int main()
     while (trace_track(map, state, end)) {
     }
 
-    racer_state state2{ .pos = start };
-    std::vector<shortcut> shortcuts;
-    while (find_shortcuts(map, state2, dim, end, shortcuts)) {
+    static constexpr auto cheatmap_part1 = create_cheatmap<2>();
+
+    racer_state state_part1{ .pos = start };
+    std::vector<shortcut> shortcuts_part1;
+    while (find_shortcuts(map, state_part1, dim, end, shortcuts_part1, cheatmap_part1, 100)) {
     }
 
-    auto count_shortcuts = [](auto init, auto &a) { return a.time_saved >= 100 ? init + 1 : init; };
+    std::cout << shortcuts_part1.size() << '\n';
 
-    int result = std::accumulate(shortcuts.begin(), shortcuts.end(), 0, count_shortcuts);
-    std::cout << result << '\n';
+    static constexpr auto cheatmap_part2 = create_cheatmap<20>();
+
+    racer_state state_part2{ .pos = start };
+    std::vector<shortcut> shortcuts_part2;
+    while (find_shortcuts(map, state_part2, dim, end, shortcuts_part2, cheatmap_part2, 100)) {
+    }
+
+    std::cout << shortcuts_part2.size() << '\n';
 }
