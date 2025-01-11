@@ -47,3 +47,15 @@ inline bool string_contains(const std::string & s1, const std::string & s2)
 {
     return s1.find(s2) != std::string::npos;
 }
+
+template <>
+struct std::hash<xy_pos_t> {
+    size_t operator()(const xy_pos_t &k) const
+    {
+        // Compute individual hash values for fields
+        // and combine them using XOR
+        // and bit shifting:
+
+        return hash<int>{}(k.first) ^ (hash<int>{}(k.second) << 1);
+    }
+};
