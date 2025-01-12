@@ -14,22 +14,22 @@ using key_map_t = std::unordered_map<char, xy_pos_t>;
 using move_map_t = std::unordered_map<xy_pos_t, char>;
 
 // clang-format off
-key_map_t keys_numpad = {
+const key_map_t keys_numpad = {
     { '7', xy_pos_t{ 0, 0 } }, { '8', xy_pos_t{ 1, 0 } }, { '9', xy_pos_t{ 2, 0 } }, 
     { '4', xy_pos_t{ 0, 1 } }, { '5', xy_pos_t{ 1, 1 } }, { '6', xy_pos_t{ 2, 1 } }, 
     { '1', xy_pos_t{ 0, 2 } }, { '2', xy_pos_t{ 1, 2 } }, { '3', xy_pos_t{ 2, 2 } }, 
                                { '0', xy_pos_t{ 1, 3 } }, { 'A', xy_pos_t{ 2, 3 } }
 };
-key_map_t keys_dir = {
+const key_map_t keys_dir = {
                                { '^', xy_pos_t{ 1, 0 } }, { 'A', xy_pos_t{ 2, 0 } }, 
     { '<', xy_pos_t{ 0, 1 } }, { 'v', xy_pos_t{ 1, 1 } }, { '>', xy_pos_t{ 2, 1 } }
 };
 // clang-format on
-move_map_t move_map = { { xy_pos_t{ 1, 0 }, '>' },
-                        { xy_pos_t{ 0, 1 }, 'v' },
-                        { xy_pos_t{ -1, 0 }, '<' },
-                        { xy_pos_t{ 0, -1 }, '^' },
-                        { xy_pos_t{ 0, 0 }, 'A' } };
+const move_map_t move_map = { { xy_pos_t{ 1, 0 }, '>' },
+                              { xy_pos_t{ 0, 1 }, 'v' },
+                              { xy_pos_t{ -1, 0 }, '<' },
+                              { xy_pos_t{ 0, -1 }, '^' },
+                              { xy_pos_t{ 0, 0 }, 'A' } };
 
 using char_row_t = std::vector<char>;
 using codes_list_t = std::vector<char_row_t>;
@@ -85,28 +85,28 @@ char_row_t compute_moves(xy_pos_t step1, xy_pos_t step2, xy_pos_t current, xy_po
     char_row_t moves_vector;
     while (step1 != xy_pos_t{ 0, 0 } && current != desired_1) {
         current = current + step1;
-        moves_vector.push_back(move_map[step1]);
+        moves_vector.push_back(move_map.at(step1));
         if (current == forbid)
             return char_row_t{};
     }
     while (step2 != xy_pos_t{ 0, 0 } && current != desired_2) {
         current = current + step2;
-        moves_vector.push_back(move_map[step2]);
+        moves_vector.push_back(move_map.at(step2));
         if (current == forbid)
             return char_row_t{};
     }
-    moves_vector.push_back(move_map[xy_pos_t{ 0, 0 }]);
+    moves_vector.push_back(move_map.at(xy_pos_t{ 0, 0 }));
     return moves_vector;
 }
 
 //this returns either 1 or 2 possible moves to get to the desired key
 //for example <<^A or ^<<A
 //<^<A is never omptimal so it is never considered
-codes_list_t compute_all_moves(key_map_t &keys, char key, xy_pos_t &current_pos, xy_pos_t forbid)
+codes_list_t compute_all_moves(const key_map_t &keys, char key, xy_pos_t &current_pos, xy_pos_t forbid)
 {
     codes_list_t all_moves;
 
-    xy_pos_t desired_pos = keys[key];
+    xy_pos_t desired_pos = keys.at(key);
     xy_pos_t diff = desired_pos - current_pos;
     xy_pos_t x_step = diff.first == 0 ? xy_pos_t{ 0, 0 } : xy_pos_t{ diff.first / std::abs(diff.first), 0 };
     xy_pos_t y_step = diff.second == 0 ? xy_pos_t{ 0, 0 } : xy_pos_t{ 0, diff.second / std::abs(diff.second) };
@@ -132,19 +132,19 @@ codes_list_t compute_all_moves(key_map_t &keys, char key, xy_pos_t &current_pos,
 }
 
 template <bool first_iter_t = false>
-size_t compute_sequence(key_map_t &keys1, key_map_t &keys2, const char_row_t &codes, xy_pos_t forbid1, xy_pos_t forbid2,
-                        int iter, int max_iter, memo_map_t &memo_map)
+size_t compute_sequence(const key_map_t &keys1, const key_map_t &keys2, const char_row_t &codes, xy_pos_t forbid1,
+                        xy_pos_t forbid2, int iter, int max_iter, memo_map_t &memo_map)
 {
-    key_map_t &keys_to_use = first_iter_t ? keys1 : keys2;
+    const key_map_t &keys_to_use = first_iter_t ? keys1 : keys2;
     xy_pos_t forbid_to_use = first_iter_t ? forbid1 : forbid2;
-    xy_pos_t current_pos = keys_to_use['A'];
+    xy_pos_t current_pos = keys_to_use.at('A');
     size_t total_size{ 0 };
     for (auto key : codes) {
         size_t moves_size{ 0 };
         memo_inputs keyvalue{ .key = key, .pos = current_pos, .iter = iter };
         if (memo_map.contains(keyvalue)) {
             moves_size = memo_map[keyvalue];
-            current_pos = keys_to_use[key];
+            current_pos = keys_to_use.at(key);
         } else {
             auto all_moves = compute_all_moves(keys_to_use, key, current_pos, forbid_to_use);
 
