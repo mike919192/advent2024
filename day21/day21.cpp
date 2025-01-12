@@ -151,14 +151,14 @@ size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos
     for (auto key : codes) {
         auto test = compute_press(keys, key, current_pos, forbid);
 
-        if (iter < 2) {
+        if (iter < max_iter) {
             std::array<int64_t, 2> values {std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max()};
             size_t i {0};
             for (const auto & seq : test) {
                 int iter2 = iter + 1;
                 values.at(i) = compute_sequence3(keys, seq, current_pos, forbid, iter2, max_iter);
                 i++;
-                std::cout << "HALP\n";
+                //std::cout << "HALP\n";
             }
             value += std::min(values.at(0), values.at(1));
         } else {
