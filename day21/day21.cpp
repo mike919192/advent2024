@@ -49,7 +49,7 @@ struct std::hash<memo_inputs> {
         // and combine them using XOR
         // and bit shifting:
 
-        return hash<char>{}(k.key) ^ (hash<xy_pos_t>{}(k.pos) << 1) ^ (hash<int>{}(k.iter) << 2);
+        return hash<char>{}(k.key) ^ (hash<xy_pos_t>{}(k.pos) << 1u) ^ (hash<int>{}(k.iter) << 2u);
     }
 };
 
@@ -131,12 +131,12 @@ codes_list_t compute_all_moves(key_map_t &keys, char key, xy_pos_t &current_pos,
     return all_moves;
 }
 
-template <bool first_iter = false>
-size_t compute_sequence(key_map_t &keys1, key_map_t &keys2, char_row_t codes, xy_pos_t forbid1, xy_pos_t forbid2,
+template <bool first_iter_t = false>
+size_t compute_sequence(key_map_t &keys1, key_map_t &keys2, const char_row_t &codes, xy_pos_t forbid1, xy_pos_t forbid2,
                         int iter, int max_iter, memo_map_t &memo_map)
 {
-    key_map_t &keys_to_use = first_iter ? keys1 : keys2;
-    xy_pos_t forbid_to_use = first_iter ? forbid1 : forbid2;
+    key_map_t &keys_to_use = first_iter_t ? keys1 : keys2;
+    xy_pos_t forbid_to_use = first_iter_t ? forbid1 : forbid2;
     xy_pos_t current_pos = keys_to_use['A'];
     size_t total_size{ 0 };
     for (auto key : codes) {
@@ -149,8 +149,7 @@ size_t compute_sequence(key_map_t &keys1, key_map_t &keys2, char_row_t codes, xy
             auto all_moves = compute_all_moves(keys_to_use, key, current_pos, forbid_to_use);
 
             if (iter < max_iter) {
-                std::array<int64_t, 2> values{ std::numeric_limits<int64_t>::max(),
-                                               std::numeric_limits<int64_t>::max() };
+                std::array<size_t, 2> values{ std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max() };
                 size_t i{ 0 };
                 for (const auto &seq : all_moves) {
                     values.at(i) = compute_sequence(keys1, keys2, seq, forbid1, forbid2, iter + 1, max_iter, memo_map);
