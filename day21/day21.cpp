@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <limits>
+#include <array>
 #include "advent.hpp"
 
 using key_map_t = std::unordered_map<char, xy_pos_t>;
@@ -98,6 +99,8 @@ codes_list_t compute_press(key_map_t &keys, char key, xy_pos_t &current_pos, xy_
     if (!test2.empty() && test2 != test)
         out.push_back(test2);
 
+    current_pos = desired_pos;
+
     return out;
 }
 
@@ -141,34 +144,57 @@ codes_list_t compute_sequence2(key_map_t &keys, char_row_t codes, xy_pos_t curre
     return decompress;
 }
 
+size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid, int & iter, int max_iter)
+{
+    current_pos = keys['A'];
+    size_t value {0};
+    for (auto key : codes) {
+        auto test = compute_press(keys, key, current_pos, forbid);
+
+        if (iter < 2) {
+            std::array<int64_t, 2> values {std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max()};
+            size_t i {0};
+            for (const auto & seq : test) {
+                int iter2 = iter + 1;
+                values.at(i) = compute_sequence3(keys, seq, current_pos, forbid, iter2, max_iter);
+                i++;
+                std::cout << "HALP\n";
+            }
+            value += std::min(values.at(0), values.at(1));
+        } else {
+            if (test.size() == 1)
+                value += test.at(0).size();
+            else
+                value += std::min(test.at(0).size(), test.at(1).size());
+        }
+    }
+
+    return value;
+}
+
 int main()
 {
     auto codes_list = read_file();
 
     int64_t complexity {0};
 
-    std::vector<size_t> min_count(codes_list.size(), std::numeric_limits<size_t>::max());
     for (size_t i = 0; i < codes_list.size(); i++) {
         xy_pos_t start_pos = keys1['A'];
 
         auto out = compute_sequence2(keys1, codes_list.at(i), start_pos, xy_pos_t{ 0, 3 });
 
         xy_pos_t start_pos2 = keys2['A'];
+        int iter {1};
 
-        for (const auto &seq : out) {
-            auto out2 = compute_sequence2(keys2, seq, start_pos2, xy_pos_t{ 0, 0 });
-            for (const auto &seq2 : out2) {
-                auto out3 = compute_sequence2(keys2, seq2, start_pos2, xy_pos_t{ 0, 0 });
-                for (const auto & el : out3) {
-                    if (el.size() < min_count.at(i))
-                        min_count.at(i) = el.size();
-                }
-                std::cout << "HALP\n";
-            }
+        size_t j {0};
+        std::vector<int64_t> min_counts(out.size(), std::numeric_limits<int64_t>::max());
+        for (const auto & seq : out) {
+            min_counts.at(j) = compute_sequence3(keys2, seq, start_pos2, xy_pos_t{ 0, 0 }, iter, 2);
+            j++;
         }
 
         int64_t num_code = (codes_list.at(i).at(0) - '0') * 100 + (codes_list.at(i).at(1) - '0') * 10 + (codes_list.at(i).at(2) - '0');
-        complexity += num_code * min_count.at(i);
+        complexity += num_code * (*std::min_element(min_counts.begin(), min_counts.end()));
     }
 
     std::cout << complexity << '\n';
