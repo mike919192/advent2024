@@ -34,6 +34,27 @@ move_map_t moves = { { xy_pos_t{ 1, 0 }, '>' },
 using char_row_t = std::vector<char>;
 using codes_list_t = std::vector<char_row_t>;
 
+struct char_and_position {
+    char key {0};
+    xy_pos_t pos {0, 0};
+    int iter {0};
+    bool operator==(const char_and_position &) const = default;
+};
+
+template <>
+struct std::hash<char_and_position> {
+    size_t operator()(const char_and_position &k) const
+    {
+        // Compute individual hash values for fields
+        // and combine them using XOR
+        // and bit shifting:
+
+        return hash<char>{}(k.key) ^ (hash<xy_pos_t>{}(k.pos) << 1) ^ (hash<int>{}(k.iter) << 2);
+    }
+};
+
+using memo_map_t = std::unordered_map<char_and_position, int64_t>;
+
 codes_list_t read_file()
 {
     std::ifstream infile("input.txt");
@@ -144,29 +165,40 @@ codes_list_t compute_sequence2(key_map_t &keys, char_row_t codes, xy_pos_t curre
     return decompress;
 }
 
-size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid, int & iter, int max_iter)
+size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid, int & iter, int max_iter, memo_map_t & memo_map)
 {
     current_pos = keys['A'];
     size_t value {0};
     for (auto key : codes) {
-        auto test = compute_press(keys, key, current_pos, forbid);
-
-        if (iter < max_iter) {
-            std::array<int64_t, 2> values {std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max()};
-            size_t i {0};
-            for (const auto & seq : test) {
-                int iter2 = iter + 1;
-                values.at(i) = compute_sequence3(keys, seq, current_pos, forbid, iter2, max_iter);
-                i++;
-                //std::cout << "HALP\n";
-            }
-            value += std::min(values.at(0), values.at(1));
-        } else {
-            if (test.size() == 1)
-                value += test.at(0).size();
-            else
-                value += std::min(test.at(0).size(), test.at(1).size());
+        size_t value2 {0};
+        char_and_position keyvalue{.key = key, .pos = current_pos, .iter = iter};
+        if (memo_map.contains(keyvalue))
+        {
+            value2 = memo_map[keyvalue];
+            current_pos = keys[key];
         }
+        else 
+        {
+            auto test = compute_press(keys, key, current_pos, forbid);
+
+            if (iter < max_iter) {
+                std::array<int64_t, 2> values {std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max()};
+                size_t i {0};
+                for (const auto & seq : test) {
+                    int iter2 = iter + 1;
+                    values.at(i) = compute_sequence3(keys, seq, current_pos, forbid, iter2, max_iter, memo_map);
+                    i++;
+                }
+                value2 += std::min(values.at(0), values.at(1));
+            } else {
+                if (test.size() == 1)
+                    value2 += test.at(0).size();
+                else
+                    value2 += std::min(test.at(0).size(), test.at(1).size());
+            }
+            memo_map[keyvalue] = value2;
+        }
+        value += value2;
     }
 
     return value;
@@ -177,6 +209,7 @@ int main()
     auto codes_list = read_file();
 
     int64_t complexity {0};
+    memo_map_t memo_map;
 
     for (size_t i = 0; i < codes_list.size(); i++) {
         xy_pos_t start_pos = keys1['A'];
@@ -189,7 +222,7 @@ int main()
         size_t j {0};
         std::vector<int64_t> min_counts(out.size(), std::numeric_limits<int64_t>::max());
         for (const auto & seq : out) {
-            min_counts.at(j) = compute_sequence3(keys2, seq, start_pos2, xy_pos_t{ 0, 0 }, iter, 2);
+            min_counts.at(j) = compute_sequence3(keys2, seq, start_pos2, xy_pos_t{ 0, 0 }, iter, 25, memo_map);
             j++;
         }
 
