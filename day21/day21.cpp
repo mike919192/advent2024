@@ -14,22 +14,22 @@ using key_map_t = std::unordered_map<char, xy_pos_t>;
 using move_map_t = std::unordered_map<xy_pos_t, char>;
 
 // clang-format off
-key_map_t keys1 = {
+key_map_t keys_numpad = {
     { '7', xy_pos_t{ 0, 0 } }, { '8', xy_pos_t{ 1, 0 } }, { '9', xy_pos_t{ 2, 0 } }, 
     { '4', xy_pos_t{ 0, 1 } }, { '5', xy_pos_t{ 1, 1 } }, { '6', xy_pos_t{ 2, 1 } }, 
     { '1', xy_pos_t{ 0, 2 } }, { '2', xy_pos_t{ 1, 2 } }, { '3', xy_pos_t{ 2, 2 } }, 
                                { '0', xy_pos_t{ 1, 3 } }, { 'A', xy_pos_t{ 2, 3 } }
 };
-key_map_t keys2 = {
+key_map_t keys_dir = {
                                { '^', xy_pos_t{ 1, 0 } }, { 'A', xy_pos_t{ 2, 0 } }, 
     { '<', xy_pos_t{ 0, 1 } }, { 'v', xy_pos_t{ 1, 1 } }, { '>', xy_pos_t{ 2, 1 } }
 };
 // clang-format on
-move_map_t moves = { { xy_pos_t{ 1, 0 }, '>' },
-                     { xy_pos_t{ 0, 1 }, 'v' },
-                     { xy_pos_t{ -1, 0 }, '<' },
-                     { xy_pos_t{ 0, -1 }, '^' },
-                     { xy_pos_t{ 0, 0 }, 'A' } };
+move_map_t move_map = { { xy_pos_t{ 1, 0 }, '>' },
+                        { xy_pos_t{ 0, 1 }, 'v' },
+                        { xy_pos_t{ -1, 0 }, '<' },
+                        { xy_pos_t{ 0, -1 }, '^' },
+                        { xy_pos_t{ 0, 0 }, 'A' } };
 
 using char_row_t = std::vector<char>;
 using codes_list_t = std::vector<char_row_t>;
@@ -85,17 +85,17 @@ char_row_t compute_moves(xy_pos_t step1, xy_pos_t step2, xy_pos_t current, xy_po
     char_row_t moves_vector;
     while (step1 != xy_pos_t{ 0, 0 } && current != desired_1) {
         current = current + step1;
-        moves_vector.push_back(moves[step1]);
+        moves_vector.push_back(move_map[step1]);
         if (current == forbid)
             return char_row_t{};
     }
     while (step2 != xy_pos_t{ 0, 0 } && current != desired_2) {
         current = current + step2;
-        moves_vector.push_back(moves[step2]);
+        moves_vector.push_back(move_map[step2]);
         if (current == forbid)
             return char_row_t{};
     }
-    moves_vector.push_back(moves[xy_pos_t{ 0, 0 }]);
+    moves_vector.push_back(move_map[xy_pos_t{ 0, 0 }]);
     return moves_vector;
 }
 
@@ -132,64 +132,66 @@ codes_list_t compute_all_moves(key_map_t &keys, char key, xy_pos_t &current_pos,
 }
 
 template <bool first_iter = false>
-size_t compute_sequence(key_map_t &keys_one, key_map_t &keys_two, char_row_t codes, xy_pos_t current_pos,
-                        xy_pos_t forbid, xy_pos_t forbid2, int &iter, int max_iter, memo_map_t &memo_map)
+size_t compute_sequence(key_map_t &keys1, key_map_t &keys2, char_row_t codes, xy_pos_t forbid1, xy_pos_t forbid2,
+                        int iter, int max_iter, memo_map_t &memo_map)
 {
-    key_map_t &keys_to_use = first_iter ? keys_one : keys_two;
-    xy_pos_t forbid_to_use = first_iter ? forbid : forbid2;
-    current_pos = keys_to_use['A'];
-    size_t value{ 0 };
+    key_map_t &keys_to_use = first_iter ? keys1 : keys2;
+    xy_pos_t forbid_to_use = first_iter ? forbid1 : forbid2;
+    xy_pos_t current_pos = keys_to_use['A'];
+    size_t total_size{ 0 };
     for (auto key : codes) {
-        size_t value2{ 0 };
+        size_t moves_size{ 0 };
         memo_inputs keyvalue{ .key = key, .pos = current_pos, .iter = iter };
         if (memo_map.contains(keyvalue)) {
-            value2 = memo_map[keyvalue];
+            moves_size = memo_map[keyvalue];
             current_pos = keys_to_use[key];
         } else {
-            auto test = compute_all_moves(keys_to_use, key, current_pos, forbid_to_use);
+            auto all_moves = compute_all_moves(keys_to_use, key, current_pos, forbid_to_use);
 
             if (iter < max_iter) {
                 std::array<int64_t, 2> values{ std::numeric_limits<int64_t>::max(),
                                                std::numeric_limits<int64_t>::max() };
                 size_t i{ 0 };
-                for (const auto &seq : test) {
-                    int iter2 = iter + 1;
-                    values.at(i) = compute_sequence(keys_one, keys_two, seq, current_pos, forbid, forbid2, iter2,
-                                                    max_iter, memo_map);
+                for (const auto &seq : all_moves) {
+                    values.at(i) = compute_sequence(keys1, keys2, seq, forbid1, forbid2, iter + 1, max_iter, memo_map);
                     i++;
                 }
-                value2 += std::min(values.at(0), values.at(1));
+                moves_size += std::min(values.at(0), values.at(1));
             } else {
-                if (test.size() == 1)
-                    value2 += test.at(0).size();
+                if (all_moves.size() == 1)
+                    moves_size += all_moves.at(0).size();
                 else
-                    value2 += std::min(test.at(0).size(), test.at(1).size());
+                    moves_size += std::min(all_moves.at(0).size(), all_moves.at(1).size());
             }
-            memo_map[keyvalue] = value2;
+            memo_map[keyvalue] = moves_size;
         }
-        value += value2;
+        total_size += moves_size;
     }
 
-    return value;
+    return total_size;
 }
 
 int main()
 {
     auto codes_list = read_file();
 
-    int64_t complexity{ 0 };
-    memo_map_t memo_map2;
+    int64_t complexity_part1{ 0 };
+    int64_t complexity_part2{ 0 };
+    memo_map_t memo_map_part1;
+    memo_map_t memo_map_part2;
 
     for (const auto &codes : codes_list) {
-        xy_pos_t start_pos = keys1['A'];
-        int iter2{ 0 };
+        auto num_moves_part1 = compute_sequence<true>(keys_numpad, keys_dir, codes, xy_pos_t{ 0, 3 }, xy_pos_t{ 0, 0 },
+                                                      0, 2, memo_map_part1);
 
-        auto out2 = compute_sequence<true>(keys1, keys2, codes, start_pos, xy_pos_t{ 0, 3 }, xy_pos_t{ 0, 0 }, iter2,
-                                           25, memo_map2);
+        auto num_moves_part2 = compute_sequence<true>(keys_numpad, keys_dir, codes, xy_pos_t{ 0, 3 }, xy_pos_t{ 0, 0 },
+                                                      0, 25, memo_map_part2);
 
         int64_t num_code = (codes.at(0) - '0') * 100 + (codes.at(1) - '0') * 10 + (codes.at(2) - '0');
-        complexity += num_code * out2;
+        complexity_part1 += num_code * num_moves_part1;
+        complexity_part2 += num_code * num_moves_part2;
     }
 
-    std::cout << complexity << '\n';
+    std::cout << complexity_part1 << '\n';
+    std::cout << complexity_part2 << '\n';
 }
