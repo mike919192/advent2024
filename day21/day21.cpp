@@ -131,19 +131,22 @@ codes_list_t compute_all_moves(key_map_t &keys, char key, xy_pos_t &current_pos,
     return all_moves;
 }
 
-size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid, int &iter,
-                         int max_iter, memo_map_t &memo_map)
+template <bool first_iter = false>
+size_t compute_sequence(key_map_t &keys_one, key_map_t &keys_two, char_row_t codes, xy_pos_t current_pos,
+                        xy_pos_t forbid, xy_pos_t forbid2, int &iter, int max_iter, memo_map_t &memo_map)
 {
-    current_pos = keys['A'];
+    key_map_t &keys_to_use = first_iter ? keys_one : keys_two;
+    xy_pos_t forbid_to_use = first_iter ? forbid : forbid2;
+    current_pos = keys_to_use['A'];
     size_t value{ 0 };
     for (auto key : codes) {
         size_t value2{ 0 };
         memo_inputs keyvalue{ .key = key, .pos = current_pos, .iter = iter };
         if (memo_map.contains(keyvalue)) {
             value2 = memo_map[keyvalue];
-            current_pos = keys[key];
+            current_pos = keys_to_use[key];
         } else {
-            auto test = compute_all_moves(keys, key, current_pos, forbid);
+            auto test = compute_all_moves(keys_to_use, key, current_pos, forbid_to_use);
 
             if (iter < max_iter) {
                 std::array<int64_t, 2> values{ std::numeric_limits<int64_t>::max(),
@@ -151,45 +154,8 @@ size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos
                 size_t i{ 0 };
                 for (const auto &seq : test) {
                     int iter2 = iter + 1;
-                    values.at(i) = compute_sequence3(keys, seq, current_pos, forbid, iter2, max_iter, memo_map);
-                    i++;
-                }
-                value2 += std::min(values.at(0), values.at(1));
-            } else {
-                if (test.size() == 1)
-                    value2 += test.at(0).size();
-                else
-                    value2 += std::min(test.at(0).size(), test.at(1).size());
-            }
-            memo_map[keyvalue] = value2;
-        }
-        value += value2;
-    }
-
-    return value;
-}
-
-size_t compute_sequence4(key_map_t &keys_one, key_map_t &keys_two, char_row_t codes, xy_pos_t current_pos,
-                         xy_pos_t forbid, xy_pos_t forbid2, int &iter, int max_iter, memo_map_t &memo_map)
-{
-    current_pos = keys_one['A'];
-    size_t value{ 0 };
-    for (auto key : codes) {
-        size_t value2{ 0 };
-        memo_inputs keyvalue{ .key = key, .pos = current_pos, .iter = iter };
-        if (memo_map.contains(keyvalue)) {
-            value2 = memo_map[keyvalue];
-            current_pos = keys_one[key];
-        } else {
-            auto test = compute_all_moves(keys_one, key, current_pos, forbid);
-
-            if (iter < max_iter) {
-                std::array<int64_t, 2> values{ std::numeric_limits<int64_t>::max(),
-                                               std::numeric_limits<int64_t>::max() };
-                size_t i{ 0 };
-                for (const auto &seq : test) {
-                    int iter2 = iter + 1;
-                    values.at(i) = compute_sequence3(keys_two, seq, current_pos, forbid2, iter2, max_iter, memo_map);
+                    values.at(i) = compute_sequence(keys_one, keys_two, seq, current_pos, forbid, forbid2, iter2,
+                                                    max_iter, memo_map);
                     i++;
                 }
                 value2 += std::min(values.at(0), values.at(1));
@@ -212,18 +178,16 @@ int main()
     auto codes_list = read_file();
 
     int64_t complexity{ 0 };
-    memo_map_t memo_map;
     memo_map_t memo_map2;
 
-    for (size_t i = 0; i < codes_list.size(); i++) {
+    for (const auto &codes : codes_list) {
         xy_pos_t start_pos = keys1['A'];
         int iter2{ 0 };
 
-        auto out2 = compute_sequence4(keys1, keys2, codes_list.at(i), start_pos, xy_pos_t{ 0, 3 }, xy_pos_t{ 0, 0 },
-                                      iter2, 25, memo_map2);
+        auto out2 = compute_sequence<true>(keys1, keys2, codes, start_pos, xy_pos_t{ 0, 3 }, xy_pos_t{ 0, 0 }, iter2,
+                                           25, memo_map2);
 
-        int64_t num_code =
-            (codes_list.at(i).at(0) - '0') * 100 + (codes_list.at(i).at(1) - '0') * 10 + (codes_list.at(i).at(2) - '0');
+        int64_t num_code = (codes.at(0) - '0') * 100 + (codes.at(1) - '0') * 10 + (codes.at(2) - '0');
         complexity += num_code * out2;
     }
 
