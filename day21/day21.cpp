@@ -34,16 +34,16 @@ move_map_t moves = { { xy_pos_t{ 1, 0 }, '>' },
 using char_row_t = std::vector<char>;
 using codes_list_t = std::vector<char_row_t>;
 
-struct char_and_position {
-    char key {0};
-    xy_pos_t pos {0, 0};
-    int iter {0};
-    bool operator==(const char_and_position &) const = default;
+struct memo_inputs {
+    char key{ 0 };
+    xy_pos_t pos{ 0, 0 };
+    int iter{ 0 };
+    bool operator==(const memo_inputs &) const = default;
 };
 
 template <>
-struct std::hash<char_and_position> {
-    size_t operator()(const char_and_position &k) const
+struct std::hash<memo_inputs> {
+    size_t operator()(const memo_inputs &k) const
     {
         // Compute individual hash values for fields
         // and combine them using XOR
@@ -53,7 +53,7 @@ struct std::hash<char_and_position> {
     }
 };
 
-using memo_map_t = std::unordered_map<char_and_position, int64_t>;
+using memo_map_t = std::unordered_map<memo_inputs, int64_t>;
 
 codes_list_t read_file()
 {
@@ -75,30 +75,36 @@ codes_list_t read_file()
     return codes_list;
 }
 
-char_row_t try_press(xy_pos_t step1, xy_pos_t step2, xy_pos_t current, xy_pos_t desired_1, xy_pos_t desired_2,
-                     xy_pos_t forbid)
+//this returns the sequence of moves to go from current -> desired_1 -> desired_2
+//the order of the moves is step1 and then step2 (X then Y or Y then X)
+//forbid is the empty space that we are not allowed to move to
+//if we enter forbid then return vector is empty
+char_row_t compute_moves(xy_pos_t step1, xy_pos_t step2, xy_pos_t current, xy_pos_t desired_1, xy_pos_t desired_2,
+                         xy_pos_t forbid)
 {
-    char_row_t test2;
-    char_row_t test;
+    char_row_t moves_vector;
     while (step1 != xy_pos_t{ 0, 0 } && current != desired_1) {
         current = current + step1;
-        test.push_back(moves[step1]);
+        moves_vector.push_back(moves[step1]);
         if (current == forbid)
-            return test2;
+            return char_row_t{};
     }
     while (step2 != xy_pos_t{ 0, 0 } && current != desired_2) {
         current = current + step2;
-        test.push_back(moves[step2]);
+        moves_vector.push_back(moves[step2]);
         if (current == forbid)
-            return test2;
+            return char_row_t{};
     }
-    test.push_back(moves[xy_pos_t{ 0, 0 }]);
-    return test;
+    moves_vector.push_back(moves[xy_pos_t{ 0, 0 }]);
+    return moves_vector;
 }
 
-codes_list_t compute_press(key_map_t &keys, char key, xy_pos_t &current_pos, xy_pos_t forbid)
+//this returns either 1 or 2 possible moves to get to the desired key
+//for example <<^A or ^<<A
+//<^<A is never omptimal so it is never considered
+codes_list_t compute_all_moves(key_map_t &keys, char key, xy_pos_t &current_pos, xy_pos_t forbid)
 {
-    codes_list_t out;
+    codes_list_t all_moves;
 
     xy_pos_t desired_pos = keys[key];
     xy_pos_t diff = desired_pos - current_pos;
@@ -112,17 +118,17 @@ codes_list_t compute_press(key_map_t &keys, char key, xy_pos_t &current_pos, xy_
     xy_pos_t step2 = y_step;
     xy_pos_t desired_2 = xy_pos_t{ current_pos.first, desired_pos.second };
 
-    auto test = try_press(step1, step2, current_pos, desired_1, desired_pos, forbid);
-    auto test2 = try_press(step2, step1, current_pos, desired_2, desired_pos, forbid);
+    auto move1 = compute_moves(step1, step2, current_pos, desired_1, desired_pos, forbid);
+    auto move2 = compute_moves(step2, step1, current_pos, desired_2, desired_pos, forbid);
 
-    if (!test.empty())
-        out.push_back(test);
-    if (!test2.empty() && test2 != test)
-        out.push_back(test2);
+    if (!move1.empty())
+        all_moves.push_back(move1);
+    if (!move2.empty() && move2 != move1)
+        all_moves.push_back(move2);
 
     current_pos = desired_pos;
 
-    return out;
+    return all_moves;
 }
 
 codes_list_t compute_sequence2(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid)
@@ -130,7 +136,7 @@ codes_list_t compute_sequence2(key_map_t &keys, char_row_t codes, xy_pos_t curre
     std::vector<codes_list_t> out;
 
     for (auto key : codes) {
-        auto test = compute_press(keys, key, current_pos, forbid);
+        auto test = compute_all_moves(keys, key, current_pos, forbid);
         current_pos = keys[key];
         out.push_back(test);
     }
@@ -148,7 +154,6 @@ codes_list_t compute_sequence2(key_map_t &keys, char_row_t codes, xy_pos_t curre
             const auto &row = list.at(index.at(j));
             for (const auto &key : row)
                 decompress.back().push_back(key);
-            auto test = list.size();
         }
         //increment index
         for (size_t j = 0; j < out.size(); j++) {
@@ -165,26 +170,25 @@ codes_list_t compute_sequence2(key_map_t &keys, char_row_t codes, xy_pos_t curre
     return decompress;
 }
 
-size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid, int & iter, int max_iter, memo_map_t & memo_map)
+size_t compute_sequence3(key_map_t &keys, char_row_t codes, xy_pos_t current_pos, xy_pos_t forbid, int &iter,
+                         int max_iter, memo_map_t &memo_map)
 {
     current_pos = keys['A'];
-    size_t value {0};
+    size_t value{ 0 };
     for (auto key : codes) {
-        size_t value2 {0};
-        char_and_position keyvalue{.key = key, .pos = current_pos, .iter = iter};
-        if (memo_map.contains(keyvalue))
-        {
+        size_t value2{ 0 };
+        memo_inputs keyvalue{ .key = key, .pos = current_pos, .iter = iter };
+        if (memo_map.contains(keyvalue)) {
             value2 = memo_map[keyvalue];
             current_pos = keys[key];
-        }
-        else 
-        {
-            auto test = compute_press(keys, key, current_pos, forbid);
+        } else {
+            auto test = compute_all_moves(keys, key, current_pos, forbid);
 
             if (iter < max_iter) {
-                std::array<int64_t, 2> values {std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max()};
-                size_t i {0};
-                for (const auto & seq : test) {
+                std::array<int64_t, 2> values{ std::numeric_limits<int64_t>::max(),
+                                               std::numeric_limits<int64_t>::max() };
+                size_t i{ 0 };
+                for (const auto &seq : test) {
                     int iter2 = iter + 1;
                     values.at(i) = compute_sequence3(keys, seq, current_pos, forbid, iter2, max_iter, memo_map);
                     i++;
@@ -208,7 +212,7 @@ int main()
 {
     auto codes_list = read_file();
 
-    int64_t complexity {0};
+    int64_t complexity{ 0 };
     memo_map_t memo_map;
 
     for (size_t i = 0; i < codes_list.size(); i++) {
@@ -217,16 +221,17 @@ int main()
         auto out = compute_sequence2(keys1, codes_list.at(i), start_pos, xy_pos_t{ 0, 3 });
 
         xy_pos_t start_pos2 = keys2['A'];
-        int iter {1};
+        int iter{ 1 };
 
-        size_t j {0};
+        size_t j{ 0 };
         std::vector<int64_t> min_counts(out.size(), std::numeric_limits<int64_t>::max());
-        for (const auto & seq : out) {
+        for (const auto &seq : out) {
             min_counts.at(j) = compute_sequence3(keys2, seq, start_pos2, xy_pos_t{ 0, 0 }, iter, 25, memo_map);
             j++;
         }
 
-        int64_t num_code = (codes_list.at(i).at(0) - '0') * 100 + (codes_list.at(i).at(1) - '0') * 10 + (codes_list.at(i).at(2) - '0');
+        int64_t num_code =
+            (codes_list.at(i).at(0) - '0') * 100 + (codes_list.at(i).at(1) - '0') * 10 + (codes_list.at(i).at(2) - '0');
         complexity += num_code * (*std::min_element(min_counts.begin(), min_counts.end()));
     }
 
