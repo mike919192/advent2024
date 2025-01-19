@@ -96,8 +96,8 @@ int main()
             for (size_t j : std::views::iota(0u, evolve.size() - 4)) {
                 if (evolve.at(j) == changes.at(0) && evolve.at(j + 1) == changes.at(1) &&
                     evolve.at(j + 2) == changes.at(2) && evolve.at(j + 3) == changes.at(3)) {
-                    int64_t test = all_evolves.at(i).at(j + 3) % 10;
-                    sum_part2 += test;
+                    int64_t value = all_evolves.at(i).at(j + 3) % 10;
+                    sum_part2 += value;
                     break;
                 }
             }
