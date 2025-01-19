@@ -8,6 +8,7 @@
 #include <numeric>
 #include <span>
 #include <unordered_map>
+#include "advent.hpp"
 
 using secret_list_t = std::vector<int64_t>;
 
@@ -55,8 +56,8 @@ int64_t evolve_secret(int64_t secret)
     return secret;
 }
 
-template <typename t_t>
-int64_t encode_key(std::span<t_t> diffs, size_t seller_num)
+template <typename t_t, size_t n_t>
+int64_t encode_key(std::span<const t_t, n_t> diffs, size_t seller_num)
 {
     int64_t encode_value{ 0 };
     //diffs use 5 bits for range of -16 to 15
@@ -84,12 +85,13 @@ int main()
 
     std::cout << sum << '\n';
 
-    std::array<int64_t, 4> changes{ -9, -9, -9, -9 };
+    permutator<int64_t, 4, 9, -9> changes;
     int64_t max_sum_part2{ 0 };
     std::vector<std::vector<int64_t>> all_diffs;
     std::vector<std::vector<int64_t>> all_evolves;
     std::unordered_map<int64_t, int64_t> banana_map;
 
+    //get all the diffs and the evolved values
     for (size_t j : std::views::iota(0u, secrets_part2_init.size())) {
         all_diffs.emplace_back();
         all_evolves.emplace_back();
@@ -103,6 +105,7 @@ int main()
         }
     }
 
+    //fill up a map with the encoded values
     for (size_t i : std::views::iota(0u, all_diffs.size())) {
         const auto &evolve = all_diffs.at(i);
         for (size_t j : std::views::iota(0u, evolve.size() - 4)) {
@@ -114,38 +117,17 @@ int main()
         }
     }
 
-    //int i {0};
-
+    //now permutate through all the changes and find mapped value if it exists
     do {
         int64_t sum_part2{ 0 };
-        //std::cout << "Iter" << i << '\n';
-        //i++;
-
         for (size_t i : std::views::iota(0u, all_diffs.size())) {
-            int64_t encoded_value = encode_key(std::span(changes.begin(), changes.end()), i);
+            int64_t encoded_value = encode_key(changes.get_nums(), i);
             if (banana_map.contains(encoded_value)) {
                 sum_part2 += banana_map[encoded_value];
-            }
-            // const auto &evolve = all_diffs.at(i);
-            // for (size_t j : std::views::iota(0u, evolve.size() - 4)) {
-            //     if (evolve.at(j) == changes.at(0) && evolve.at(j + 1) == changes.at(1) &&
-            //         evolve.at(j + 2) == changes.at(2) && evolve.at(j + 3) == changes.at(3)) {
-            //         int64_t value = all_evolves.at(i).at(j + 3) % 10;
-            //         sum_part2 += value;
-            //         break;
-            //     }
-            // }
-        }
-        for (size_t i : std::views::iota(0u, 4u)) {
-            if (changes.at(i) == 9) {
-                changes.at(i) = -9;
-            } else {
-                changes.at(i)++;
-                break;
             }
         }
         if (sum_part2 > max_sum_part2)
             max_sum_part2 = sum_part2;
-    } while (changes != std::array<int64_t, 4>{ 9, 9, 9, 9 });
+    } while (changes.next_permutation());
     std::cout << max_sum_part2 << '\n';
 }

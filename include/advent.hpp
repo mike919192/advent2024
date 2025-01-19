@@ -43,7 +43,7 @@ inline void rtrim(std::string &s)
     s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
 }
 
-inline bool string_contains(const std::string & s1, const std::string & s2)
+inline bool string_contains(const std::string &s1, const std::string &s2)
 {
     return s1.find(s2) != std::string::npos;
 }
@@ -56,6 +56,37 @@ struct std::hash<xy_pos_t> {
         // and combine them using XOR
         // and bit shifting:
 
-        return hash<int>{}(k.first) ^ (hash<int>{}(k.second) << 1);
+        return hash<int>{}(k.first) ^ (hash<int>{}(k.second) << 1u);
+    }
+};
+
+template <typename t_t, size_t n_t, t_t max_value_t, t_t reset_value_t = 0>
+struct permutator {
+private:
+    std::array<t_t, n_t> m_nums{};
+
+public:
+    permutator()
+    {
+        m_nums.fill(reset_value_t);
+    }
+
+    //return false when the permutation repeats
+    bool next_permutation()
+    {
+        for (auto &num : m_nums) {
+            if (num == max_value_t) {
+                num = reset_value_t;
+            } else {
+                num++;
+                break;
+            }
+        }
+        return !std::all_of(m_nums.begin(), m_nums.end(), [](auto i) { return i == reset_value_t; });
+    }
+
+    std::span<const t_t, n_t> get_nums()
+    {
+        return std::span(m_nums);
     }
 };
