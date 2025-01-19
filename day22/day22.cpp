@@ -69,7 +69,6 @@ int main()
 
     std::array<int, 4> changes{ -9,-9,-9,-9 };
     int64_t max_sum_part2{ 0 };
-    int iternum{ 0 };
     std::vector<std::vector<int64_t>> all_diffs;
     std::vector<std::vector<int64_t>> all_evolves;
 
@@ -77,7 +76,6 @@ int main()
         all_diffs.emplace_back();
         all_evolves.emplace_back();
         int64_t last_secret{ secrets_part2_init.at(j) };
-        size_t changes_index{ 0 };
         for (size_t i : std::views::iota(0u, 2000u)) {
             int64_t new_evolve = evolve_secret(last_secret);
             int diff = static_cast<int>((new_evolve % 10) - (last_secret % 10));
@@ -86,12 +84,12 @@ int main()
             last_secret = new_evolve;
         }
     }
-    int i {0};
+    //int i {0};
 
     do {
         int64_t sum_part2{ 0 };
-        std::cout << "Iter" << i << '\n';
-        i++;
+        //std::cout << "Iter" << i << '\n';
+        //i++;
 
         for (size_t i : std::views::iota(0u, all_diffs.size())) {
             const auto &evolve = all_diffs.at(i);
