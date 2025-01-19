@@ -57,7 +57,7 @@ int64_t evolve_secret(int64_t secret)
 }
 
 template <typename t_t, size_t n_t>
-int64_t encode_key(std::span<const t_t, n_t> diffs, size_t seller_num)
+int64_t encode_key(std::span<const t_t, n_t> diffs)
 {
     int64_t encode_value{ 0 };
     //diffs use 5 bits for range of -16 to 15
@@ -66,7 +66,7 @@ int64_t encode_key(std::span<const t_t, n_t> diffs, size_t seller_num)
     }
 
     //12 bits for seller_num for range of 0 to 4095
-    encode_value |= (seller_num & 0xFFF) << (5u * 4u);
+    //encode_value |= (seller_num & 0xFFF) << (5u * 4u);
 
     return encode_value;
 }
@@ -85,8 +85,6 @@ int main()
 
     std::cout << sum << '\n';
 
-    permutator<int64_t, 4, 9, -9> changes;
-    int64_t max_sum_part2{ 0 };
     std::vector<std::vector<int64_t>> all_diffs;
     std::vector<std::vector<int64_t>> all_evolves;
     std::unordered_map<int64_t, int64_t> banana_map;
@@ -108,26 +106,31 @@ int main()
     //fill up a map with the encoded values
     for (size_t i : std::views::iota(0u, all_diffs.size())) {
         const auto &evolve = all_diffs.at(i);
+        std::unordered_map<int64_t, int64_t> seller_map;
         for (size_t j : std::views::iota(0u, evolve.size() - 4)) {
             auto diff_span = std::span(std::next(evolve.begin(), j), std::next(evolve.begin(), j + 4));
-            int64_t encoded_value = encode_key(diff_span, i);
-            if (!banana_map.contains(encoded_value)) {
-                banana_map[encoded_value] = all_evolves.at(i).at(j + 3) % 10;
+            int64_t encoded_value = encode_key(diff_span);
+            if (!seller_map.contains(encoded_value)) {
+                seller_map[encoded_value] = all_evolves.at(i).at(j + 3) % 10;
+            }
+        }
+        //merge the maps, duplicates get added
+        for (const auto & el : seller_map) {
+            if (!banana_map.contains(el.first)) {
+                banana_map[el.first] = el.second;
+            } else {
+                banana_map[el.first] += el.second;
             }
         }
     }
 
-    //now permutate through all the changes and find mapped value if it exists
-    do {
-        int64_t sum_part2{ 0 };
-        for (size_t i : std::views::iota(0u, all_diffs.size())) {
-            int64_t encoded_value = encode_key(changes.get_nums(), i);
-            if (banana_map.contains(encoded_value)) {
-                sum_part2 += banana_map[encoded_value];
-            }
-        }
-        if (sum_part2 > max_sum_part2)
-            max_sum_part2 = sum_part2;
-    } while (changes.next_permutation());
+    //find the max value in the map
+    auto max_element = std::max_element(banana_map.begin(), banana_map.end(), [](auto a, auto b)
+    {
+        return a.second < b.second;
+    });
+
+    auto max_sum_part2 = max_element->second;
+    
     std::cout << max_sum_part2 << '\n';
 }
