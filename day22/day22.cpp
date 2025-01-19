@@ -65,9 +65,6 @@ int64_t encode_key(std::span<const t_t, n_t> diffs)
         encode_value |= (diffs[i] & 0x1F) << (5u * i);
     }
 
-    //12 bits for seller_num for range of 0 to 4095
-    //encode_value |= (seller_num & 0xFFF) << (5u * 4u);
-
     return encode_value;
 }
 
