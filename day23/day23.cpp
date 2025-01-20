@@ -99,6 +99,47 @@ interconn_list_t get_interconns_with_t(const interconn_list_t &interconns)
     return interconns_with_t;
 }
 
+interconn_list_t get_max_interconnects(const conn_map_t &conn_map)
+{
+    interconn_list_t interconns;
+
+    for (const auto &conn : conn_map) {
+        std::string comp1 = conn.first;
+        
+        
+        for (size_t i : std::views::iota(1u, conn.second.size())) {
+            std::string comp2 = conn.second.at(i - 1u);
+            interconn_row_t temp_row;
+            temp_row.push_back(comp1);
+            temp_row.push_back(comp2);
+            for (size_t j : std::views::iota(i, conn.second.size())) {
+                std::string comp3 = conn.second.at(j);
+
+                bool all_in {true};
+                for (const auto & row_el : temp_row) {
+                    const interconn_row_t &row = conn_map.at(row_el);
+                    if (std::find(row.begin(), row.end(), comp3) != row.end()) {
+                        all_in &= true;
+                    } else {
+                        all_in = false;
+                        break;
+                    }
+                }
+
+                if (all_in)
+                    temp_row.push_back(comp3);
+            }
+            std::sort(temp_row.begin(), temp_row.end());
+
+            if (std::find(interconns.begin(), interconns.end(), temp_row) == interconns.end()) {
+                interconns.push_back(std::move(temp_row));
+            }
+        }
+    }
+
+    return interconns;
+}
+
 int main()
 {
     auto connects = read_file();
@@ -110,4 +151,19 @@ int main()
     auto interconns_with_t = get_interconns_with_t(interconns);
 
     std::cout << interconns_with_t.size() << '\n';
+
+    auto max_interconns = get_max_interconnects(conn_map);
+
+    auto max_el = std::max_element(max_interconns.begin(), max_interconns.end(), [] (auto & a, auto & b)
+    {
+        return a.size() < b.size();
+    });
+
+    std::cout << max_el->at(0);
+
+    for (size_t i : std::views::iota(1u, max_el->size())) {
+        std::cout << ',' << max_el->at(i);
+    }
+    
+    std::cout << '\n';
 }
