@@ -4,13 +4,28 @@
 #include <sstream>
 #include <vector>
 #include <tuple>
-#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <format>
 #include <iostream>
 #include <array>
+#include <ranges>
 
 enum class gate_operation { gate_and, gate_or, gate_xor };
+
+const char *to_string(gate_operation v)
+{
+    switch (v) {
+    case gate_operation::gate_and:
+        return "AND";
+    case gate_operation::gate_or:
+        return "OR";
+    case gate_operation::gate_xor:
+        return "XOR";
+    default:
+        throw std::runtime_error("Error doing gate op!");
+    }
+}
 
 bool do_gate_op(bool in1, bool in2, gate_operation op)
 {
@@ -31,7 +46,7 @@ struct gate {
     std::string out_name;
 };
 
-using wire_map_t = std::map<std::string, bool>;
+using wire_map_t = std::unordered_map<std::string, bool>;
 using gate_list_t = std::vector<gate>;
 
 std::tuple<wire_map_t, gate_list_t> read_file()
@@ -79,11 +94,11 @@ std::tuple<wire_map_t, gate_list_t> read_file()
     return { wire_map, gate_list };
 }
 
-bool sim_tick(wire_map_t &wires, gate_list_t &gates, int& iter)
+bool sim_tick(wire_map_t &wires, gate_list_t &gates, int &iter)
 {
     if (iter > 100)
         return false;
-    
+
     iter++;
     auto do_gate = [&wires](gate &a) {
         if (wires.contains(a.in_name1) && wires.contains(a.in_name2)) {
@@ -132,57 +147,111 @@ wire_map_t create_wiremap(size_t bitsize, int64_t in1, int64_t in2)
     return wiremap;
 }
 
+std::tuple<std::string, std::string> print_gate(gate_list_t &gates, std::string &out_name)
+{
+    auto itr = std::find_if(gates.begin(), gates.end(), [&out_name](gate &a) { return a.out_name == out_name; });
+
+    std::cout << itr->in_name1 << " " << to_string(itr->op) << " " << itr->in_name2 << " = " << itr->out_name << '\n';
+
+    return { itr->in_name1, itr->in_name2 };
+}
+
 int main()
 {
     auto [wire_map, gate_list] = read_file();
     size_t input_bitsize = wire_map.size() / 2U;
 
-    int iter {0};
+    int iter{ 0 };
     while (sim_tick(wire_map, gate_list, iter)) {
     };
 
     std::cout << get_outvalue(wire_map) << '\n';
 
-    std::string test = "z01";
-    auto itr = std::find_if(gate_list.begin(), gate_list.end(), [&test](gate & a)
+    std::array<size_t, 4> swap1 = {93, 99, 94, 116};
+    std::array<size_t, 4> swap2 = {151, 203, 201, 183};
+    size_t offset = 92;
+
+    for (size_t i = 0; i < swap1.size(); i++)
+        std::swap(gate_list.at(swap1.at(i) - offset).out_name, gate_list.at(swap2.at(i) - offset).out_name);
+
+    std::unordered_map<std::string, std::string> carry_map;
+
+    //logic for first stage is different
     {
-        return a.out_name == test;
-    });
+        int i{ 1 };
+        std::cout << "\nSTAGE " << i << '\n';
+        std::string out = std::format("z{:02}", i);
+        std::string carry = std::format("carry{:02}", i);
 
-    auto gate_list2 = gate_list;
+        auto [in1, in2] = print_gate(gate_list, out);
+        carry_map[carry] = in2;
+        std::cout << carry << " = " << in2 << '\n';
 
-    int swap_count {0};
+        print_gate(gate_list, in1);
+        print_gate(gate_list, in2);
+    }
 
-restart_check:
+    for (size_t i = 2; i < input_bitsize; i++) {
+        std::cout << "\nSTAGE " << i << '\n';
+        std::string out = std::format("z{:02}", i);
+        std::string carry = std::format("carry{:02}", i);
+        std::string last_carry = std::format("carry{:02}", i - 1);
+        std::string carry_in1;
+        std::string carry_in2;
 
-    for (size_t y = 0; y <= input_bitsize; y++) {
-        int64_t y_bits = y == 0 ? 0 : 1 << (y - 1U);
-        for (size_t x = 0; x <= input_bitsize; x++) {
-            int64_t x_bits = x == 0 ? 0 : 1 << (x - 1U);
-            auto wire_map2 = create_wiremap(input_bitsize, x_bits, y_bits);
+        {
+            auto [in1, in2] = print_gate(gate_list, out);
 
-            int iter {0};
-            while (sim_tick(wire_map2, gate_list2, iter)) {
-            };
+            //one of these will have xn and yn as inputs
+            auto [in1_1, in2_1] = print_gate(gate_list, in1);
+            auto [in1_2, in2_2] = print_gate(gate_list, in2);
             
-            if (iter > 100)
-                std::cout << "Max iter reached\n";
 
-            int64_t out_value = get_outvalue(wire_map2);
-            if ((x_bits + y_bits) != out_value) {
-                std::cout << "Should be: " << x_bits << " + " << y_bits << " = " << (x_bits + y_bits) << '\n';
-                std::cout << "Is: " << out_value << '\n';
-
-                //do swap
-                std::array<size_t, 2> swap1 = {93, 98};
-                std::array<size_t, 2> swap2 = {107, 261};
-                size_t offset = 92;
-                std::swap(gate_list2.at(swap1.at(swap_count) - offset).out_name, gate_list2.at(swap2.at(swap_count) - offset).out_name);
-                swap_count++;
-
-                //restart check
-                goto restart_check;
+            if ((in1_1.starts_with('x') || in2_1.starts_with('x')) && (in1_1.starts_with('y') || in2_1.starts_with('y'))) {
+                carry_map[carry] = in2;
+                std::cout << carry << " = " << in2 << '\n';
+                carry_in1 = in1_2;
+                carry_in2 = in2_2;
+            } else {
+                carry_map[carry] = in1;
+                std::cout << carry << " = " << in1 << '\n';
+                carry_in1 = in1_1;
+                carry_in2 = in2_1;
             }
         }
+
+        auto [in1_1, in2_1] = print_gate(gate_list, carry_in1);
+        auto [in1_2, in2_2] = print_gate(gate_list, carry_in2);
+
+        if ((in1_1.starts_with('x') || in2_1.starts_with('x')) && (in1_1.starts_with('y') || in2_1.starts_with('y'))) {
+            if (carry_map[last_carry] != in1_2 && carry_map[last_carry] != in2_2)
+                std::cout << "Last Carry doesnt match!\n";
+            if (carry_map[last_carry] == in1_2)
+                print_gate(gate_list, in2_2);
+            else
+                print_gate(gate_list, in1_2);
+        } else {
+            if (carry_map[last_carry] != in1_1 && carry_map[last_carry] != in2_1)
+                std::cout << "Last Carry doesnt match!\n";
+            if (carry_map[last_carry] == in1_1)
+                print_gate(gate_list, in2_1);
+            else
+                print_gate(gate_list, in1_1);
+        }        
     }
+
+    std::vector<std::string> output_names;
+    for (size_t i = 0; i < swap1.size(); i++) {
+        output_names.push_back(gate_list.at(swap1.at(i) - offset).out_name);
+        output_names.push_back(gate_list.at(swap2.at(i) - offset).out_name);
+    }
+
+    std::sort(output_names.begin(), output_names.end());
+
+    std::cout << output_names.at(0);
+
+    for (size_t i : std::views::iota(1u, output_names.size()))
+        std::cout << ',' << output_names.at(i);
+
+    std::cout << '\n';
 }
