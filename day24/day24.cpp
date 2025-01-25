@@ -11,12 +11,12 @@
 
 enum class gate_operation { gate_and, gate_or, gate_xor };
 
-int8_t do_gate_op(int8_t in1, int8_t in2, gate_operation op)
+bool do_gate_op(bool in1, bool in2, gate_operation op)
 {
     if (op == gate_operation::gate_and)
-        return in1 & in2;
+        return in1 && in2;
     else if (op == gate_operation::gate_or)
-        return in1 | in2;
+        return in1 || in2;
     else if (op == gate_operation::gate_xor)
         return in1 ^ in2;
     else
@@ -30,7 +30,7 @@ struct gate {
     std::string out_name;
 };
 
-using wire_map_t = std::unordered_map<std::string, int8_t>;
+using wire_map_t = std::unordered_map<std::string, bool>;
 using gate_list_t = std::vector<gate>;
 
 std::tuple<wire_map_t, gate_list_t> read_file()
@@ -49,7 +49,7 @@ std::tuple<wire_map_t, gate_list_t> read_file()
         getline(ss, name, ':');
         ss >> value;
 
-        wire_map[name] = static_cast<int8_t>(value);
+        wire_map[name] = value != 0;
     }
 
     for (std::string line; std::getline(infile, line);) {
@@ -73,7 +73,6 @@ std::tuple<wire_map_t, gate_list_t> read_file()
             throw std::runtime_error("Error parsing gate op!");
 
         gate_list.push_back(gate{ .in_name1 = in_name1, .in_name2 = in_name2, .op = op, .out_name = out_name });
-        wire_map[out_name] = static_cast<int8_t>(-1);
     }
 
     return { wire_map, gate_list };
@@ -82,15 +81,13 @@ std::tuple<wire_map_t, gate_list_t> read_file()
 bool sim_tick(wire_map_t &wires, gate_list_t &gates)
 {
     auto do_gate = [&wires](gate &a) {
-        int8_t in1 = wires.at(a.in_name1);
-        int8_t in2 = wires.at(a.in_name2);
-        if (in1 != -1 && in2 != -1) {
-            int8_t out = do_gate_op(in1, in2, a.op);
-            wires.at(a.out_name) = out;
+        if (wires.contains(a.in_name1) && wires.contains(a.in_name2)) {
+            bool out = do_gate_op(wires[a.in_name1], wires[a.in_name2], a.op);
+            wires[a.out_name] = out;
         }
     };
 
-    auto any_gates_todo = [&wires](gate &a) { return wires.at(a.out_name) == -1; };
+    auto any_gates_todo = [&wires](gate &a) { return !wires.contains(a.out_name); };
 
     std::for_each(gates.begin(), gates.end(), do_gate);
 
@@ -104,7 +101,7 @@ int main()
     while (sim_tick(wire_map, gate_list)) {
     };
 
-    int i{ 0 };
+    uint i{ 0 };
     std::string z_out_name = std::format("z{:02}", i);
     int64_t out_value{ 0 };
 
