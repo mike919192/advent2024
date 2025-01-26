@@ -166,6 +166,33 @@ std::tuple<std::string, std::string> get_inputs(gate_list_t &gates, std::string 
     return { itr->in_name1, itr->in_name2 };
 }
 
+void repair1(gate_list_t & gates, size_t i)
+{
+    //find x10 XOR y10, note the output
+    std::string x = std::format("x{:02}", i);
+    std::string y = std::format("y{:02}", i);
+    std::string z = std::format("z{:02}", i);
+    auto itr = std::find_if(gates.begin(), gates.end(), [&x, &y](gate & a)
+    {
+        return a.in_name1 == x && a.in_name2 == y && a.op == gate_operation::gate_xor;
+    });
+
+    //find a command that uses the output with XOR op
+    auto itr2 = std::find_if(gates.begin(), gates.end(), [itr](gate & a)
+    {
+        return (a.in_name1 == itr->out_name || a.in_name2 == itr->out_name) && a.op == gate_operation::gate_xor;
+    });
+
+    //find the original one we want to swap
+    auto itr3 = std::find_if(gates.begin(), gates.end(), [itr, &z](gate & a)
+    {
+        return a.out_name == z;
+    });
+
+    //swap the outputs
+    std::swap(itr3->out_name, itr2->out_name);
+}
+
 int main()
 {
     auto [wire_map, gate_list] = read_file();
@@ -181,8 +208,8 @@ int main()
     std::array<size_t, 4> swap2 = { 151, 203, 201, 183 };
     size_t offset = 92;
 
-    for (size_t i = 0; i < swap1.size(); i++)
-        std::swap(gate_list.at(swap1.at(i) - offset).out_name, gate_list.at(swap2.at(i) - offset).out_name);
+    //for (size_t i = 0; i < swap1.size(); i++)
+    //    std::swap(gate_list.at(swap1.at(i) - offset).out_name, gate_list.at(swap2.at(i) - offset).out_name);
 
     std::unordered_map<std::string, std::string> carry_map;
 
@@ -213,6 +240,15 @@ int main()
             auto [in1, in2] = print_gate(gate_list, out);
             //need a check here that in1 and in2 are not x, y
             //stage 10 fails this
+            if (in1.starts_with('x')) {
+                std::cout << "Repairing...\n";
+                repair1(gate_list, i);
+
+                //restart the loop
+                std::cout << "Restarting stage\n";
+                i--;
+                continue;
+            }            
 
             //need a check here that the operation is XOR
             //stage 21, 33 fails this
