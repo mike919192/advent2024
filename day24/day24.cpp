@@ -148,25 +148,25 @@ wire_map_t create_wiremap(size_t bitsize, int64_t in1, int64_t in2)
     return wiremap;
 }
 
-std::tuple<std::string, std::string> print_gate(gate_list_t &gates, std::string &out_name)
+std::tuple<std::string, std::string, gate_operation> print_gate(gate_list_t &gates, std::string &out_name)
 {
     auto itr = std::find_if(gates.begin(), gates.end(), [&out_name](gate &a) { return a.out_name == out_name; });
 
     std::cout << itr->in_name1 << " " << to_string(itr->op) << " " << itr->in_name2 << " = " << itr->out_name << '\n';
 
-    return { itr->in_name1, itr->in_name2 };
+    return { itr->in_name1, itr->in_name2, itr->op };
 }
 
-std::tuple<std::string, std::string> get_inputs(gate_list_t &gates, std::string &out_name)
+std::tuple<std::string, std::string, gate_operation> get_inputs(gate_list_t &gates, std::string &out_name)
 {
     auto itr = std::find_if(gates.begin(), gates.end(), [&out_name](gate &a) { return a.out_name == out_name; });
 
     //std::cout << itr->in_name1 << " " << to_string(itr->op) << " " << itr->in_name2 << " = " << itr->out_name << '\n';
 
-    return { itr->in_name1, itr->in_name2 };
+    return { itr->in_name1, itr->in_name2, itr->op };
 }
 
-void repair1(gate_list_t & gates, size_t i)
+void repair1(gate_list_t & gates, size_t i, std::vector<std::string> &output_names)
 {
     //find x10 XOR y10, note the output
     std::string x = std::format("x{:02}", i);
@@ -190,7 +190,32 @@ void repair1(gate_list_t & gates, size_t i)
     });
 
     //swap the outputs
+    output_names.push_back(itr3->out_name);
+    output_names.push_back(itr2->out_name);
     std::swap(itr3->out_name, itr2->out_name);
+}
+
+void repair2(gate_list_t & gates, size_t i, std::vector<std::string> &output_names)
+{
+    //find x10 XOR y10, note the output
+    std::string x = std::format("x{:02}", i);
+    std::string y = std::format("y{:02}", i);
+    std::string z = std::format("z{:02}", i);
+    auto itr = std::find_if(gates.begin(), gates.end(), [&x, &y](gate & a)
+    {
+        return a.in_name1 == x && a.in_name2 == y && a.op == gate_operation::gate_xor;
+    });
+
+    //find a command that uses the output with XOR op
+    auto itr2 = std::find_if(gates.begin(), gates.end(), [&x, &y](gate & a)
+    {
+        return a.in_name1 == x && a.in_name2 == y && a.op == gate_operation::gate_and;
+    });
+
+    //swap the outputs
+    output_names.push_back(itr->out_name);
+    output_names.push_back(itr2->out_name);
+    std::swap(itr->out_name, itr2->out_name);
 }
 
 int main()
@@ -204,13 +229,7 @@ int main()
 
     std::cout << get_outvalue(wire_map) << '\n';
 
-    std::array<size_t, 4> swap1 = { 93, 99, 94, 116 };
-    std::array<size_t, 4> swap2 = { 151, 203, 201, 183 };
-    size_t offset = 92;
-
-    //for (size_t i = 0; i < swap1.size(); i++)
-    //    std::swap(gate_list.at(swap1.at(i) - offset).out_name, gate_list.at(swap2.at(i) - offset).out_name);
-
+    std::vector<std::string> output_names;
     std::unordered_map<std::string, std::string> carry_map;
 
     //logic for first stage is different
@@ -220,7 +239,7 @@ int main()
         std::string out = std::format("z{:02}", i);
         std::string carry = std::format("carry{:02}", i);
 
-        auto [in1, in2] = print_gate(gate_list, out);
+        auto [in1, in2, op] = print_gate(gate_list, out);
         carry_map[carry] = in2;
         std::cout << carry << " = " << in2 << '\n';
 
@@ -237,29 +256,37 @@ int main()
         std::string carry_in2;
 
         {
-            auto [in1, in2] = print_gate(gate_list, out);
+            auto [in1, in2, op] = print_gate(gate_list, out);
             //need a check here that in1 and in2 are not x, y
             //stage 10 fails this
-            if (in1.starts_with('x')) {
+            //need a check here that the operation is XOR
+            //stage 21, 33 fails this
+            if (in1.starts_with('x') || op != gate_operation::gate_xor) {
                 std::cout << "Repairing...\n";
-                repair1(gate_list, i);
+                repair1(gate_list, i, output_names);
 
                 //restart the loop
                 std::cout << "Restarting stage\n";
                 i--;
                 continue;
-            }            
-
-            //need a check here that the operation is XOR
-            //stage 21, 33 fails this
+            }
 
             //one of these will have xn and yn as inputs
-            auto [in1_1, in2_1] = get_inputs(gate_list, in1);
-            auto [in1_2, in2_2] = get_inputs(gate_list, in2);
+            auto [in1_1, in2_1, op1] = get_inputs(gate_list, in1);
+            auto [in1_2, in2_2, op2] = get_inputs(gate_list, in2);
 
             if (in1_1.starts_with('x') && in2_1.starts_with('y')) {
                 //need a check here that the operation is XOR
                 //stage 39 fails this
+                if (op1 != gate_operation::gate_xor) {
+                    std::cout << "Repairing...\n";
+                    repair2(gate_list, i, output_names);
+
+                    //restart the loop
+                    std::cout << "Restarting stage\n";
+                    i--;
+                    continue;
+                }
                 print_gate(gate_list, in1);
                 print_gate(gate_list, in2);
                 carry_map[carry] = in2;
@@ -267,6 +294,17 @@ int main()
                 carry_in1 = in1_2;
                 carry_in2 = in2_2;
             } else {
+                //need a check here that the operation is XOR
+                //stage 39 fails this
+                if (op2 != gate_operation::gate_xor) {
+                    std::cout << "Repairing...\n";
+                    repair2(gate_list, i, output_names);
+
+                    //restart the loop
+                    std::cout << "Restarting stage\n";
+                    i--;
+                    continue;
+                }
                 print_gate(gate_list, in2);
                 print_gate(gate_list, in1);
                 carry_map[carry] = in1;
@@ -276,8 +314,8 @@ int main()
             }
         }
 
-        auto [in1_1, in2_1] = get_inputs(gate_list, carry_in1);
-        auto [in1_2, in2_2] = get_inputs(gate_list, carry_in2);
+        auto [in1_1, in2_1, op1] = get_inputs(gate_list, carry_in1);
+        auto [in1_2, in2_2, op2] = get_inputs(gate_list, carry_in2);
 
         if (in1_1.starts_with('x') && in2_1.starts_with('y')) {
             if (carry_map[last_carry] != in1_2 && carry_map[last_carry] != in2_2)
@@ -298,12 +336,6 @@ int main()
             else
                 print_gate(gate_list, in1_1);
         }
-    }
-
-    std::vector<std::string> output_names;
-    for (size_t i = 0; i < swap1.size(); i++) {
-        output_names.push_back(gate_list.at(swap1.at(i) - offset).out_name);
-        output_names.push_back(gate_list.at(swap2.at(i) - offset).out_name);
     }
 
     std::sort(output_names.begin(), output_names.end());
