@@ -211,12 +211,19 @@ int main()
 
         {
             auto [in1, in2] = print_gate(gate_list, out);
+            //need a check here that in1 and in2 are not x, y
+            //stage 10 fails this
+
+            //need a check here that the operation is XOR
+            //stage 21, 33 fails this
 
             //one of these will have xn and yn as inputs
             auto [in1_1, in2_1] = get_inputs(gate_list, in1);
             auto [in1_2, in2_2] = get_inputs(gate_list, in2);
 
             if (in1_1.starts_with('x') && in2_1.starts_with('y')) {
+                //need a check here that the operation is XOR
+                //stage 39 fails this
                 print_gate(gate_list, in1);
                 print_gate(gate_list, in2);
                 carry_map[carry] = in2;
