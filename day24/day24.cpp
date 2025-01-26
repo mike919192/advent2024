@@ -337,7 +337,7 @@ int main()
 
     std::cout << get_outvalue(wire_map) << '\n';
 
-    auto output_names = repair_stages(input_bitsize, gate_list);    
+    auto output_names = repair_stages(input_bitsize, gate_list);
 
     std::cout << output_names.at(0);
 
