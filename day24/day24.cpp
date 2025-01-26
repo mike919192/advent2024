@@ -60,7 +60,7 @@ std::tuple<wire_map_t, gate_list_t> read_file()
             break;
         std::istringstream ss(line);
         std::string name;
-        int value;
+        int value{ 0 };
 
         getline(ss, name, ':');
         ss >> value;
@@ -166,28 +166,23 @@ std::tuple<std::string, std::string, gate_operation> get_inputs(gate_list_t &gat
     return { itr->in_name1, itr->in_name2, itr->op };
 }
 
-void repair1(gate_list_t & gates, size_t i, std::vector<std::string> &output_names)
+void repair1(gate_list_t &gates, size_t i, std::vector<std::string> &output_names)
 {
     //find x10 XOR y10, note the output
     std::string x = std::format("x{:02}", i);
     std::string y = std::format("y{:02}", i);
     std::string z = std::format("z{:02}", i);
-    auto itr = std::find_if(gates.begin(), gates.end(), [&x, &y](gate & a)
-    {
+    auto itr = std::find_if(gates.begin(), gates.end(), [&x, &y](gate &a) {
         return a.in_name1 == x && a.in_name2 == y && a.op == gate_operation::gate_xor;
     });
 
     //find a command that uses the output with XOR op
-    auto itr2 = std::find_if(gates.begin(), gates.end(), [itr](gate & a)
-    {
+    auto itr2 = std::find_if(gates.begin(), gates.end(), [itr](gate &a) {
         return (a.in_name1 == itr->out_name || a.in_name2 == itr->out_name) && a.op == gate_operation::gate_xor;
     });
 
     //find the original one we want to swap
-    auto itr3 = std::find_if(gates.begin(), gates.end(), [itr, &z](gate & a)
-    {
-        return a.out_name == z;
-    });
+    auto itr3 = std::find_if(gates.begin(), gates.end(), [itr, &z](gate &a) { return a.out_name == z; });
 
     //swap the outputs
     output_names.push_back(itr3->out_name);
@@ -195,20 +190,17 @@ void repair1(gate_list_t & gates, size_t i, std::vector<std::string> &output_nam
     std::swap(itr3->out_name, itr2->out_name);
 }
 
-void repair2(gate_list_t & gates, size_t i, std::vector<std::string> &output_names)
+void repair2(gate_list_t &gates, size_t i, std::vector<std::string> &output_names)
 {
     //find x10 XOR y10, note the output
     std::string x = std::format("x{:02}", i);
     std::string y = std::format("y{:02}", i);
-    std::string z = std::format("z{:02}", i);
-    auto itr = std::find_if(gates.begin(), gates.end(), [&x, &y](gate & a)
-    {
+    auto itr = std::find_if(gates.begin(), gates.end(), [&x, &y](gate &a) {
         return a.in_name1 == x && a.in_name2 == y && a.op == gate_operation::gate_xor;
     });
 
     //find a command that uses the output with XOR op
-    auto itr2 = std::find_if(gates.begin(), gates.end(), [&x, &y](gate & a)
-    {
+    auto itr2 = std::find_if(gates.begin(), gates.end(), [&x, &y](gate &a) {
         return a.in_name1 == x && a.in_name2 == y && a.op == gate_operation::gate_and;
     });
 
@@ -342,7 +334,7 @@ int main()
 
     std::cout << output_names.at(0);
 
-    for (size_t i : std::views::iota(1u, output_names.size()))
+    for (size_t i : std::views::iota(1U, output_names.size()))
         std::cout << ',' << output_names.at(i);
 
     std::cout << '\n';
