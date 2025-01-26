@@ -70,14 +70,14 @@ std::tuple<wire_map_t, gate_list_t> read_file()
 
     for (std::string line; std::getline(infile, line);) {
         std::istringstream ss(line);
-        std::string in_name1;
+        std::array<std::string, 2> in_name;
         std::string op_str;
-        std::string in_name2;
         std::string arrow;
         std::string out_name;
         gate_operation op{ gate_operation::gate_and };
 
-        ss >> in_name1 >> op_str >> in_name2 >> arrow >> out_name;
+        ss >> in_name.at(0) >> op_str >> in_name.at(1) >> arrow >> out_name;
+        std::sort(in_name.begin(), in_name.end());
 
         if (op_str == "AND")
             op = gate_operation::gate_and;
@@ -88,7 +88,8 @@ std::tuple<wire_map_t, gate_list_t> read_file()
         else
             throw std::runtime_error("Error parsing gate op!");
 
-        gate_list.push_back(gate{ .in_name1 = in_name1, .in_name2 = in_name2, .op = op, .out_name = out_name });
+        gate_list.push_back(
+            gate{ .in_name1 = in_name.at(0), .in_name2 = in_name.at(1), .op = op, .out_name = out_name });
     }
 
     return { wire_map, gate_list };
@@ -156,6 +157,15 @@ std::tuple<std::string, std::string> print_gate(gate_list_t &gates, std::string 
     return { itr->in_name1, itr->in_name2 };
 }
 
+std::tuple<std::string, std::string> get_inputs(gate_list_t &gates, std::string &out_name)
+{
+    auto itr = std::find_if(gates.begin(), gates.end(), [&out_name](gate &a) { return a.out_name == out_name; });
+
+    //std::cout << itr->in_name1 << " " << to_string(itr->op) << " " << itr->in_name2 << " = " << itr->out_name << '\n';
+
+    return { itr->in_name1, itr->in_name2 };
+}
+
 int main()
 {
     auto [wire_map, gate_list] = read_file();
@@ -167,8 +177,8 @@ int main()
 
     std::cout << get_outvalue(wire_map) << '\n';
 
-    std::array<size_t, 4> swap1 = {93, 99, 94, 116};
-    std::array<size_t, 4> swap2 = {151, 203, 201, 183};
+    std::array<size_t, 4> swap1 = { 93, 99, 94, 116 };
+    std::array<size_t, 4> swap2 = { 151, 203, 201, 183 };
     size_t offset = 92;
 
     for (size_t i = 0; i < swap1.size(); i++)
@@ -203,16 +213,19 @@ int main()
             auto [in1, in2] = print_gate(gate_list, out);
 
             //one of these will have xn and yn as inputs
-            auto [in1_1, in2_1] = print_gate(gate_list, in1);
-            auto [in1_2, in2_2] = print_gate(gate_list, in2);
-            
+            auto [in1_1, in2_1] = get_inputs(gate_list, in1);
+            auto [in1_2, in2_2] = get_inputs(gate_list, in2);
 
-            if ((in1_1.starts_with('x') || in2_1.starts_with('x')) && (in1_1.starts_with('y') || in2_1.starts_with('y'))) {
+            if (in1_1.starts_with('x') && in2_1.starts_with('y')) {
+                print_gate(gate_list, in1);
+                print_gate(gate_list, in2);
                 carry_map[carry] = in2;
                 std::cout << carry << " = " << in2 << '\n';
                 carry_in1 = in1_2;
                 carry_in2 = in2_2;
             } else {
+                print_gate(gate_list, in2);
+                print_gate(gate_list, in1);
                 carry_map[carry] = in1;
                 std::cout << carry << " = " << in1 << '\n';
                 carry_in1 = in1_1;
@@ -220,12 +233,14 @@ int main()
             }
         }
 
-        auto [in1_1, in2_1] = print_gate(gate_list, carry_in1);
-        auto [in1_2, in2_2] = print_gate(gate_list, carry_in2);
+        auto [in1_1, in2_1] = get_inputs(gate_list, carry_in1);
+        auto [in1_2, in2_2] = get_inputs(gate_list, carry_in2);
 
-        if ((in1_1.starts_with('x') || in2_1.starts_with('x')) && (in1_1.starts_with('y') || in2_1.starts_with('y'))) {
+        if (in1_1.starts_with('x') && in2_1.starts_with('y')) {
             if (carry_map[last_carry] != in1_2 && carry_map[last_carry] != in2_2)
                 std::cout << "Last Carry doesnt match!\n";
+            print_gate(gate_list, carry_in1);
+            print_gate(gate_list, carry_in2);
             if (carry_map[last_carry] == in1_2)
                 print_gate(gate_list, in2_2);
             else
@@ -233,11 +248,13 @@ int main()
         } else {
             if (carry_map[last_carry] != in1_1 && carry_map[last_carry] != in2_1)
                 std::cout << "Last Carry doesnt match!\n";
+            print_gate(gate_list, carry_in2);
+            print_gate(gate_list, carry_in1);
             if (carry_map[last_carry] == in1_1)
                 print_gate(gate_list, in2_1);
             else
                 print_gate(gate_list, in1_1);
-        }        
+        }
     }
 
     std::vector<std::string> output_names;
