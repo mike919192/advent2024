@@ -210,17 +210,8 @@ void repair2(gate_list_t &gates, size_t i, std::vector<std::string> &output_name
     std::swap(itr->out_name, itr2->out_name);
 }
 
-int main()
+std::vector<std::string> repair_stages(size_t input_bitsize, gate_list_t gate_list)
 {
-    auto [wire_map, gate_list] = read_file();
-    size_t input_bitsize = wire_map.size() / 2U;
-
-    int iter{ 0 };
-    while (sim_tick(wire_map, gate_list, iter)) {
-    };
-
-    std::cout << get_outvalue(wire_map) << '\n';
-
     std::vector<std::string> output_names;
     std::unordered_map<std::string, std::string> carry_map;
 
@@ -331,6 +322,22 @@ int main()
     }
 
     std::sort(output_names.begin(), output_names.end());
+
+    return output_names;
+}
+
+int main()
+{
+    auto [wire_map, gate_list] = read_file();
+    size_t input_bitsize = wire_map.size() / 2U;
+
+    int iter{ 0 };
+    while (sim_tick(wire_map, gate_list, iter)) {
+    };
+
+    std::cout << get_outvalue(wire_map) << '\n';
+
+    auto output_names = repair_stages(input_bitsize, gate_list);    
 
     std::cout << output_names.at(0);
 
