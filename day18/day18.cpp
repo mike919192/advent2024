@@ -147,7 +147,7 @@ int main()
         }
 
         if (state2.pos != end) {
-            std::cout << bytes.at(i - 1).at(0) << ", " << bytes.at(i - 1).at(1) << '\n';
+            std::cout << bytes.at(i - 1).at(0) << "," << bytes.at(i - 1).at(1) << '\n';
             break;
         }
     }
