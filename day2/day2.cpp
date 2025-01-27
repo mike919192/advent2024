@@ -50,7 +50,8 @@ int main()
         csvRows.push_back(std::move(row));
     }
 
-    int safereport{ 0 };
+    int safereport_part1{ 0 };
+    int safereport_part2{ 0 };
 
     for (auto const &row : csvRows) {
         bool unmodifiedsafe = isSafe(row);
@@ -67,10 +68,14 @@ int main()
             }
         }
 
+        if (unmodifiedsafe)
+            safereport_part1++;
+
         if (unmodifiedsafe || modifiedsafe) {
-            safereport++;
+            safereport_part2++;
         }
     }
 
-    std::cout << safereport << "\n";
+    std::cout << safereport_part1 << "\n";
+    std::cout << safereport_part2 << "\n";
 }
