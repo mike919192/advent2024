@@ -186,12 +186,14 @@ int main()
                 found = true;
         }
         if (found) {
-            std::cout << part2_output.at(0);
-            for (size_t i : std::views::iota(1u, part2_output.size()))
-                std::cout << ',' << part2_output.at(i);
+            //std::cout << part2_output.at(0);
+            //for (size_t i : std::views::iota(1u, part2_output.size()))
+            //    std::cout << ',' << part2_output.at(i);
 
-            std::cout << '\n';
-            std::cout << a_register << '\n';
+            //std::cout << '\n';
+            //std::cout << a_register << '\n';
+            if (size_match == 16)
+                break;
             size_match += 2;
             a_register = a_register << 2l * 3l;
         } else {
@@ -199,4 +201,6 @@ int main()
         }
         found = false;
     }
+
+    std::cout << a_register << '\n';
 }
