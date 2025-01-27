@@ -5,6 +5,7 @@
 #include <cctype>
 #include <locale>
 #include <utility>
+#include <span>
 
 template <typename t_t, typename u_t>
 auto operator+(const std::pair<t_t, u_t> &l, const std::pair<t_t, u_t> &r)
