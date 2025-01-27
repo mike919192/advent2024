@@ -148,11 +148,14 @@ wire_map_t create_wiremap(size_t bitsize, int64_t in1, int64_t in2)
     return wiremap;
 }
 
+template <bool print_out_t>
 std::tuple<std::string, std::string, gate_operation> print_gate(gate_list_t &gates, std::string &out_name)
 {
     auto itr = std::find_if(gates.begin(), gates.end(), [&out_name](gate &a) { return a.out_name == out_name; });
 
-    std::cout << itr->in_name1 << " " << to_string(itr->op) << " " << itr->in_name2 << " = " << itr->out_name << '\n';
+    if constexpr (print_out_t)
+        std::cout << itr->in_name1 << " " << to_string(itr->op) << " " << itr->in_name2 << " = " << itr->out_name
+                  << '\n';
 
     return { itr->in_name1, itr->in_name2, itr->op };
 }
@@ -210,6 +213,7 @@ void repair2(gate_list_t &gates, size_t i, std::vector<std::string> &output_name
     std::swap(itr->out_name, itr2->out_name);
 }
 
+template <bool print_out_t>
 std::vector<std::string> repair_stages(size_t input_bitsize, gate_list_t gate_list)
 {
     std::vector<std::string> output_names;
@@ -218,20 +222,23 @@ std::vector<std::string> repair_stages(size_t input_bitsize, gate_list_t gate_li
     //logic for first stage is different
     {
         int i{ 1 };
-        std::cout << "\nSTAGE " << i << '\n';
+        if constexpr (print_out_t)
+            std::cout << "\nSTAGE " << i << '\n';
         std::string out = std::format("z{:02}", i);
         std::string carry = std::format("carry{:02}", i);
 
-        auto [in1, in2, op] = print_gate(gate_list, out);
+        auto [in1, in2, op] = print_gate<print_out_t>(gate_list, out);
         carry_map[carry] = in2;
-        std::cout << carry << " = " << in2 << '\n';
+        if constexpr (print_out_t)
+            std::cout << carry << " = " << in2 << '\n';
 
-        print_gate(gate_list, in1);
-        print_gate(gate_list, in2);
+        print_gate<print_out_t>(gate_list, in1);
+        print_gate<print_out_t>(gate_list, in2);
     }
 
     for (size_t i = 2; i < input_bitsize; i++) {
-        std::cout << "\nSTAGE " << i << '\n';
+        if constexpr (print_out_t)
+            std::cout << "\nSTAGE " << i << '\n';
         std::string out = std::format("z{:02}", i);
         std::string carry = std::format("carry{:02}", i);
         std::string last_carry = std::format("carry{:02}", i - 1);
@@ -239,17 +246,19 @@ std::vector<std::string> repair_stages(size_t input_bitsize, gate_list_t gate_li
         std::string carry_in2;
 
         {
-            auto [in1, in2, op] = print_gate(gate_list, out);
+            auto [in1, in2, op] = print_gate<print_out_t>(gate_list, out);
             //need a check here that in1 and in2 are not x, y
             //stage 10 fails this
             //need a check here that the operation is XOR
             //stage 21, 33 fails this
             if (in1.starts_with('x') || op != gate_operation::gate_xor) {
-                std::cout << "Repairing...\n";
+                if constexpr (print_out_t)
+                    std::cout << "Repairing...\n";
                 repair1(gate_list, i, output_names);
 
                 //restart the loop
-                std::cout << "Restarting stage\n";
+                if constexpr (print_out_t)
+                    std::cout << "Restarting stage\n";
                 i--;
                 continue;
             }
@@ -262,36 +271,42 @@ std::vector<std::string> repair_stages(size_t input_bitsize, gate_list_t gate_li
                 //need a check here that the operation is XOR
                 //stage 39 fails this
                 if (op1 != gate_operation::gate_xor) {
-                    std::cout << "Repairing...\n";
+                    if constexpr (print_out_t)
+                        std::cout << "Repairing...\n";
                     repair2(gate_list, i, output_names);
 
                     //restart the loop
-                    std::cout << "Restarting stage\n";
+                    if constexpr (print_out_t)
+                        std::cout << "Restarting stage\n";
                     i--;
                     continue;
                 }
-                print_gate(gate_list, in1);
-                print_gate(gate_list, in2);
+                print_gate<print_out_t>(gate_list, in1);
+                print_gate<print_out_t>(gate_list, in2);
                 carry_map[carry] = in2;
-                std::cout << carry << " = " << in2 << '\n';
+                if constexpr (print_out_t)
+                    std::cout << carry << " = " << in2 << '\n';
                 carry_in1 = in1_2;
                 carry_in2 = in2_2;
             } else {
                 //need a check here that the operation is XOR
                 //stage 39 fails this
                 if (op2 != gate_operation::gate_xor) {
-                    std::cout << "Repairing...\n";
+                    if constexpr (print_out_t)
+                        std::cout << "Repairing...\n";
                     repair2(gate_list, i, output_names);
 
                     //restart the loop
-                    std::cout << "Restarting stage\n";
+                    if constexpr (print_out_t)
+                        std::cout << "Restarting stage\n";
                     i--;
                     continue;
                 }
-                print_gate(gate_list, in2);
-                print_gate(gate_list, in1);
+                print_gate<print_out_t>(gate_list, in2);
+                print_gate<print_out_t>(gate_list, in1);
                 carry_map[carry] = in1;
-                std::cout << carry << " = " << in1 << '\n';
+                if constexpr (print_out_t)
+                    std::cout << carry << " = " << in1 << '\n';
                 carry_in1 = in1_1;
                 carry_in2 = in2_1;
             }
@@ -303,21 +318,21 @@ std::vector<std::string> repair_stages(size_t input_bitsize, gate_list_t gate_li
         if (in1_1.starts_with('x') && in2_1.starts_with('y')) {
             if (carry_map[last_carry] != in1_2 && carry_map[last_carry] != in2_2)
                 std::cout << "Last Carry doesnt match!\n";
-            print_gate(gate_list, carry_in1);
-            print_gate(gate_list, carry_in2);
+            print_gate<print_out_t>(gate_list, carry_in1);
+            print_gate<print_out_t>(gate_list, carry_in2);
             if (carry_map[last_carry] == in1_2)
-                print_gate(gate_list, in2_2);
+                print_gate<print_out_t>(gate_list, in2_2);
             else
-                print_gate(gate_list, in1_2);
+                print_gate<print_out_t>(gate_list, in1_2);
         } else {
             if (carry_map[last_carry] != in1_1 && carry_map[last_carry] != in2_1)
                 std::cout << "Last Carry doesnt match!\n";
-            print_gate(gate_list, carry_in2);
-            print_gate(gate_list, carry_in1);
+            print_gate<print_out_t>(gate_list, carry_in2);
+            print_gate<print_out_t>(gate_list, carry_in1);
             if (carry_map[last_carry] == in1_1)
-                print_gate(gate_list, in2_1);
+                print_gate<print_out_t>(gate_list, in2_1);
             else
-                print_gate(gate_list, in1_1);
+                print_gate<print_out_t>(gate_list, in1_1);
         }
     }
 
@@ -337,7 +352,7 @@ int main()
 
     std::cout << get_outvalue(wire_map) << '\n';
 
-    auto output_names = repair_stages(input_bitsize, gate_list);
+    auto output_names = repair_stages<false>(input_bitsize, gate_list);
 
     std::cout << output_names.at(0);
 
