@@ -6,6 +6,7 @@
 #include <ranges>
 #include <numeric>
 #include <iostream>
+#include <algorithm>
 
 template <typename T, typename U, typename V, typename W>
 auto operator+(const std::pair<T, U> &l, const std::pair<V, W> &r)
@@ -78,9 +79,8 @@ void simulation_tick(robot_list_t &robots, xy_pos_t dim)
     }
 }
 
-void print_robots(std::ostream &out, robot_list_t &robots, xy_pos_t dim, int seconds)
+std::vector<std::string> print_robots(robot_list_t &robots, xy_pos_t dim, int seconds)
 {
-    out << seconds << '\n';
     std::vector<std::string> print_output;
     print_output.reserve(dim.second);
 
@@ -95,10 +95,7 @@ void print_robots(std::ostream &out, robot_list_t &robots, xy_pos_t dim, int sec
             print_output.at(robot.pos.second).at(robot.pos.first)++;
         }
     }
-
-    for (const auto &line : print_output) {
-        out << line << '\n';
-    }
+    return print_output;
 }
 
 void part1(robot_list_t robots, xy_pos_t dim)
@@ -140,10 +137,17 @@ int main()
 
     part1(robots, dim_actual);
 
-    std::ofstream out("output.txt");
-
     for (int i : std::views::iota(0, 10000)) {
-        print_robots(out, robots, dim_actual, i);
+        std::vector<std::string> output = print_robots(robots, dim_actual, i);
+
+        auto itr = std::find_if(output.begin(), output.end(),
+                                [](std::string &a) { return a.find("1111111111") != std::string::npos; });
+
+        if (itr != output.end()) {
+            std::cout << i << '\n';
+            break;
+        }
+
         simulation_tick(robots, dim_actual);
     }
 }
