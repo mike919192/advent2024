@@ -17,6 +17,26 @@ int main()
 {
     const std::string allText = readFile();
 
+    std::regex word_regex_part1("mul\\((\\d+),(\\d+)\\)");
+    auto words_begin_part1 = std::sregex_iterator(allText.begin(), allText.end(), word_regex_part1);
+    auto words_end_part1 = std::sregex_iterator();
+
+    int sum_part1{ 0 };
+
+    for (std::sregex_iterator i = words_begin_part1; i != words_end_part1; ++i) {
+        std::smatch match = *i;
+        std::string match_str = match.str();
+
+        if (match.size() >= 3) {
+            int num1 = std::stoi(match[1].str());
+            int num2 = std::stoi(match[2].str());
+
+            sum_part1 += num1 * num2;
+        }
+    }
+
+    std::cout << sum_part1 << '\n';
+
     std::regex word_regex("mul\\((\\d+),(\\d+)\\)|do\\(\\)|don't\\(\\)");
     auto words_begin = std::sregex_iterator(allText.begin(), allText.end(), word_regex);
     auto words_end = std::sregex_iterator();
