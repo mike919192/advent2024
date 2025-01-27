@@ -65,6 +65,7 @@ num_type do_oper(oper oper_in, num_type a, num_type b)
     }
 }
 
+template <bool part2_t>
 struct oper_permutator {
     unsigned int num_of_operators{ 0 };
     std::array<oper, 32> opers{};
@@ -77,9 +78,12 @@ struct oper_permutator {
                 opers.at(i) = oper::multiply;
                 break;
             } else if (opers.at(i) == oper::multiply) {
-                opers.at(i) = oper::concat;
-                //opers.at(i) = oper::add;
-                break;
+                if constexpr (part2_t) {
+                    opers.at(i) = oper::concat;
+                    break;
+                } else {
+                    opers.at(i) = oper::add;
+                }
             } else if (opers.at(i) == oper::concat) {
                 opers.at(i) = oper::add;
             } else {
@@ -96,14 +100,13 @@ struct oper_permutator {
     }
 };
 
-int main()
+template <bool part2_t>
+num_type solve_equations(const std::vector<std::vector<num_type>> &equations)
 {
-    const auto equations = read_file();
-
     num_type result_sum{ 0 };
 
     for (const auto &equation : equations) {
-        oper_permutator permu{ .num_of_operators = equation.size() - 2 };
+        oper_permutator<part2_t> permu{ .num_of_operators = equation.size() - 2 };
 
         do {
             num_type result = equation.at(1);
@@ -118,5 +121,18 @@ int main()
         } while (permu.next_permutation());
     }
 
+    return result_sum;
+}
+
+int main()
+{
+    const auto equations = read_file();
+
+    num_type result_sum = solve_equations<false>(equations);
+
     std::cout << result_sum << '\n';
+
+    num_type result_sum_part2 = solve_equations<true>(equations);
+
+    std::cout << result_sum_part2 << '\n';
 }
